@@ -1,5 +1,7 @@
 """Native inventories, evidence and conservative Office editing capabilities."""
 
+from .docx_headings import paragraph_role
+
 import base64
 from collections import Counter
 import io
@@ -288,14 +290,15 @@ class OfficeEngine:
                 if kind in {"p", "tbl", "hyperlink"} and text(el).strip():
                     label += " — " + " ".join(text(el).split())[:65]
                 obj = None
-                if kind == "p" and text(el).strip():
+                if el.tag == q("w", "p"):
                     style = prop(child(el, "pPr"), "pStyle", q("w", "val")) or ""
                     obj = self.add_object(
                         "paragraph",
                         label,
                         target,
                         text(el),
-                        ["set_text_language"],
+                        ["set_paragraph_role", "set_text_language"],
+                        role=paragraph_role(el, pkg.xml("word/styles.xml")),
                         style=style,
                     )
                 elif kind in {"drawing", "pict", "object"}:
@@ -352,7 +355,8 @@ class OfficeEngine:
                         label,
                         target,
                         text(el),
-                        ["set_table_header"] if rows and not complex_table else [],
+                        ["set_table_title"] + (["set_table_header"] if rows and not complex_table else []),
+                        table_title=prop(child(el, "tblPr"), "tblCaption", q("w", "val")) or "",
                         rows=[
                             [text(cell) for cell in row if local(cell) == "tc"]
                             for row in rows
@@ -375,7 +379,7 @@ class OfficeEngine:
                         label,
                         target,
                         text(el),
-                        ["set_link_text"] if simple else [],
+                        [],
                         value=text(el),
                         destination=pkg.relationships(part)
                         .get(el.get(q("r", "id")), {})

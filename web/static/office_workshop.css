@@ -104,3 +104,18 @@
 .ow .ow-content h3 { margin: 1.2rem 0 .5rem; }
 .ow .ow-content details { margin: .8rem 0; }
 .ow .ow-repair { padding: 1rem; background: white; border: 1px solid #d5dcd8; border-radius: 6px; }
+
+.ow .ow-headings { border: 1px solid #9aa8b7; padding: 1rem; margin-bottom: 1.5rem; background: white; }
+.ow .ow-paragraphs { max-height: 350px; overflow: auto; border: 1px solid #c5cbd6; padding: .5rem; }
+.ow .ow-paragraph-row { display: flex; gap: .75rem; padding: .5rem; border-bottom: 1px solid #d5dcd8; }
+.ow .ow-paragraph-row input { flex-shrink: 0; }
+.ow .ow-paragraph-row p { white-space: pre-wrap; overflow-wrap: anywhere; margin: .3rem 0; user-select: text; }
+.ow .ow-paragraph-row small { color: #475569; user-select: none; }
+.ow .ow-paragraph-row:has(input:checked) { background: #edf4fa; }
+
+.ow .ow-tool-links { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1rem 0; }
+.ow .ow-tool-links a { color: #15284b; text-decoration: underline; }
+.ow .ow-object-list { border: 1px solid #9aa8b7; padding: 1rem; background: white; }
+.ow .ow-object-list > summary { cursor: pointer; font-weight: 600; }
+.ow .ow-object-card { border-bottom: 1px solid #d5dcd8; padding: 1rem 0; }
+.ow .ow-object-card .ow-preview { max-width: 200px; max-height: 160px; }

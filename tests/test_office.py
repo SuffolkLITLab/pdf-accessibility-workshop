@@ -301,7 +301,7 @@ def test_pptx_hidden_title_language_and_image(tmp_path):
     assert Presentation(io.BytesIO(after)).slides[0].shapes.title.left < 0
 
 
-def test_ordinary_link_edit_preserves_destination():
+def test_docx_does_not_allow_replacing_body_link_text():
     document = Document()
     paragraph = document.add_paragraph()
     from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -315,18 +315,13 @@ def test_ordinary_link_edit_preserves_destination():
     run = ET.SubElement(hyperlink, q("w", "r"))
     ET.SubElement(run, q("w", "t")).text = "Click here"
     data = save(document)
-    (after, _, receipt), _ = repair(
-        data, "link", "set_link_text", "Housing application"
-    )
-    package = Package(after)
-    assert "Housing application" in "".join(
-        package.roots["word/document.xml"].itertext()
-    )
-    assert (
-        package.members["word/_rels/document.xml.rels"]
-        == Package(data).members["word/_rels/document.xml.rels"]
-    )
-    assert receipt["verification"]["operation_idempotence"] == "pass"
+    report = OfficeEngine().inspect(data, "Links.docx")
+    obj = next(o for o in report["objects"] if o["kind"] == "link")
+    assert obj["operations"] == []
+    with pytest.raises(PackageError, match="not supported"):
+        plan_repairs(data, "Links.docx", digest(data), [
+            {"object_id": obj["id"], "action": "set_link_text", "value": "New body text"}
+        ], "test-link-policy")
 
 
 def test_signed_pdf_cannot_be_rewritten():

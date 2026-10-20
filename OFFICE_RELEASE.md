@@ -17,7 +17,9 @@ use framework-independent `workshop/office`, contracts, and services.
   Natural codes/severities remain available. Fixes cover malformed XML, unused
   language styles, false header toggles, duplicate table targets and logical names.
 - DOCX title, default/selected text language, supported DrawingML descriptions and
-  decorative choices, confirmed simple table headers, and single-run link text.
+  decorative choices, accessible table names, confirmed simple table headers, and
+  Title/Body text/Heading 1–9 paragraph roles. Text selection applies to containing
+  paragraphs; body-text replacement is not offered.
 - PPTX slide-list order, native/inherited title placeholders (including off-slide
   titles), shape/group inventories, descriptions/decorative choices, applicable
   language/font defaults, table/link/media inventories, and explicit complex-content
@@ -42,7 +44,7 @@ Neither a no-finding detector result nor a human note is a conformance certifica
 This is the first native inspection/controlled-repair release, not completion of
 all eight milestones. No Office raster renderer, conversion pipeline, Office AI,
 complex field-link editor, slide reordering, SmartArt reconstruction, caption
-editing, heading/list restructuring, or full effective-contrast resolver is enabled.
+editing, paragraph splitting/list restructuring, or full effective-contrast resolver is enabled.
 Unresolved contrast, layout/master semantics, complex tables and media remain
 visible review/unsupported coverage. PowerPoint first-row formatting is explicitly
 not proof of assistive-technology header semantics. A semantic view is not a
@@ -65,7 +67,7 @@ package and durable shared worker queue remain later migrations.
 
 Portable fixtures cover identical table labels, malformed required/optional XML,
 unused/applied language styles, multilingual overrides, false headers, native slide
-order, hidden titles, descriptions/decorative choices, single-run links, template
+order, hidden titles, descriptions/decorative choices, table names, paragraph roles, link preservation, template
 tokens, unchanged payloads, idempotence, stale plans, exact export hashes and signed
 PDF rewrite prevention. Browser tests cover both Office formats through repair,
 notes, reload, report download and undo. Existing PDF regressions remain mandatory.

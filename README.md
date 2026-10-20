@@ -21,6 +21,28 @@ explicit repairs, immutable history, and file/report/manifest downloads. See
 [release scope and remaining work](OFFICE_RELEASE.md) and
 [source/dependency notices](THIRD_PARTY_NOTICES.md).
 
+## DOCX semantic repairs
+
+In **Review and repair**, use **Heading levels**, **Image alt text**, or
+**Table names** to jump to the editing controls.
+
+- Highlight text in the read-only paragraph view or select paragraphs with checkboxes,
+  then apply Title, Heading 1–9, or Body text. The entire containing paragraphs change
+  role; their text, runs, fields, and inline formatting remain intact. Word's existing
+  styles are reused, so paragraph appearance can change. Up to 30 paragraphs per repair.
+- Edit an image's description or explicitly mark it decorative. Choices target the
+  selected drawing instance, including when several drawings reuse one image file.
+- Set a table's accessible title in Word table properties (`w:tblCaption`). This does
+  not insert a visible caption or alter cells, even for a complex table.
+
+These operations preserve unrelated package member payloads, recheck the document,
+record a receipt, and support undo and browser reload. They do not provide general
+body-text editing. Native Word/screen-reader behavior still needs reader testing.
+
+Paragraph style/property handling uses [python-docx](https://python-docx.readthedocs.io/en/latest/user/styles-using.html)
+without resaving the entire package. Table names use the
+[Office table-caption property](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.tableproperties.tablecaption?view=openxml-3.0.1).
+
 ## Saved reviews
 
 Each review has a `/review/<uuid>` URL. The native file, edits, review decisions, external

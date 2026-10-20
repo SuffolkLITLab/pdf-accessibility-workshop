@@ -47,6 +47,10 @@ def plan_repairs(source, filename, expected_sha256, decisions, idempotency_key):
                 r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*", value
             ):
                 raise PackageError("Enter a BCP 47 language tag, such as en-US or es.")
+        elif action == "set_paragraph_role":
+            from .docx_headings import ROLES
+            if not isinstance(value, str) or value not in ROLES:
+                raise PackageError("Choose Body text, Title, or Heading 1–9.")
         elif action == "set_table_header":
             if value is not True:
                 raise PackageError(
@@ -212,7 +216,10 @@ def apply_operation(pkg, op, node):
             defaults[:] = sorted(defaults, key=lambda node: order.get(node.tag, 99))
             pkg.touch(pkg.main)
         return
-    if action == "set_text_language":
+    if action == "set_paragraph_role":
+        from .docx_headings import apply_role
+        apply_role(pkg, node, value)
+    elif action == "set_text_language":
         prefix = "w" if pkg.format == "docx" else "a"
         for run in list(node.iter(q(prefix, "r"))) + (
             list(node.iter(q("a", "fld"))) if prefix == "a" else []
@@ -235,6 +242,17 @@ def apply_operation(pkg, op, node):
             decorative(nv, True)
         else:
             decorative(nv, False)
+    elif action == "set_table_title":
+        props = ensure(node, q("w", "tblPr"), first=True)
+        caption = props.find(q("w", "tblCaption"))
+        if caption is None:
+            caption = ET.Element(q("w", "tblCaption"))
+            following = next((n for n in props if n.tag in {q("w", "tblDescription"), q("w", "tblPrChange")}), None)
+            if following is None:
+                props.append(caption)
+            else:
+                props.insert(list(props).index(following), caption)
+        caption.set(q("w", "val"), value)
     elif action == "set_table_header":
         if pkg.format == "docx":
             row = next(el for el in node if local(el) == "tr")

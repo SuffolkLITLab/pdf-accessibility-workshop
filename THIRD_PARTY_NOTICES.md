@@ -30,3 +30,6 @@ Sans carries its SIL Open Font License in `web/static/brand/AlbertSans-OFL.txt`.
 workshop fonts are served through Google Fonts. The generated DOCX/PPTX test
 fixtures contain only text and geometry authored for this repository; no client
 documents are included.
+
+DOCX paragraph style/property edits use python-docx 1.2.0 (MIT), copyright
+Steve Canny. Its installed license is included in the runtime dependency inventory.

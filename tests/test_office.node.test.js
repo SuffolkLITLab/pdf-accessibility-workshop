@@ -98,3 +98,97 @@ for (const format of ["docx", "pptx"])
       await browser.close();
     }
   });
+
+test("DOCX heading roles from text selection, persistence and undo", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(base);
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "office-example.docx"));
+    await page.getByRole("button", {name: "Open workshop"}).click();
+    await page.locator(".ow").waitFor({state: "visible"});
+    await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    await page.locator("[data-paragraph-id]").nth(1).evaluate(p => {
+      const range = document.createRange();
+      range.setStart(p.firstChild, 2);
+      range.setEnd(p.firstChild, 8);
+      const selection = window.getSelection();
+      selection.removeAllRanges(); selection.addRange(range);
+      p.dispatchEvent(new MouseEvent("mouseup", {bubbles: true}));
+    });
+    assert.match(await page.locator("#ow-heading-scope").innerText(), /^1 entire/);
+    await page.locator("#ow-heading-role").selectOption("heading2");
+    await page.getByRole("button", {name: "Apply role to selected paragraphs", exact: true}).click();
+    await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    assert.match(await page.locator(".ow-paragraph-row").nth(1).innerText(), /Heading 2/);
+    assert.match(await page.locator("[data-paragraph-id]").nth(1).innerText(), /users\[0\]\.name/);
+    await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
+    // Simulate a saved review from the previous engine release.
+    await page.evaluate(async () => {
+      const {loadReview, saveReview} = await import("/static/review_store.js");
+      const record = await loadReview(location.pathname.split("/").pop());
+      record.snapshot.state.inspection.engine_version = "office-1.0";
+      for (const obj of record.snapshot.state.inspection.objects) {
+        delete obj.role;
+        obj.operations = obj.operations.filter(op => op !== "set_paragraph_role");
+      }
+      await saveReview(record);
+    });
+    await page.reload();
+    await page.locator(".ow").waitFor({state: "visible"});
+    await idleAfterRestore(page);
+    assert.match(await page.locator(".ow-paragraph-row").nth(1).innerText(), /Heading 2/);
+    await page.getByRole("button", {name: "Undo last repair"}).click();
+    await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    assert.match(await page.locator(".ow-paragraph-row").nth(1).innerText(), /Body text/);
+    // Checkboxes are the keyboard-accessible alternative to highlighting.
+    await page.locator(".ow-paragraph-row input").nth(0).check();
+    await page.locator(".ow-paragraph-row input").nth(1).check();
+    assert.match(await page.locator("#ow-heading-scope").innerText(), /^2 entire/);
+    await page.locator("#ow-heading-role").selectOption("heading1");
+    await page.getByRole("button", {name: "Apply role to selected paragraphs", exact: true}).click();
+    await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    assert.match(await page.locator(".ow-paragraph-row").nth(0).innerText(), /Heading 1/);
+    assert.match(await page.locator(".ow-paragraph-row").nth(1).innerText(), /Heading 1/);
+  } finally { await browser.close(); }
+});
+
+test("DOCX image alternatives and table names are discoverable and persist", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(base);
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "semantic-example.docx"));
+    await page.getByRole("button", {name: "Open workshop"}).click();
+    await page.locator(".ow").waitFor({state: "visible"});
+    await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    const idle = () => page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    await page.getByRole("link", {name: "Image alt text", exact: true}).click();
+    await page.getByRole("button", {name: "Edit alt text or decorative choice"}).click();
+    await page.getByLabel("Alternative text", {exact: true}).fill("Blue represents completed tasks");
+    await page.getByRole("button", {name: "Apply approved repair"}).click();
+    await idle();
+    assert.equal(await page.locator("#ow-value").inputValue(), "Blue represents completed tasks");
+    await page.locator("#ow-action").selectOption("mark_decorative");
+    await page.getByRole("button", {name: "Apply approved repair"}).click();
+    await idle();
+    await page.getByRole("link", {name: "Image alt text", exact: true}).click();
+    assert.match(await page.locator("#ow-image-tools").innerText(), /Marked decorative/);
+    await page.getByRole("link", {name: "Table names", exact: true}).click();
+    await page.getByRole("button", {name: "Edit table name"}).click();
+    await page.getByLabel("Table name (accessible title)", {exact: true}).fill("Applicant contact details");
+    await page.getByRole("button", {name: "Apply approved repair"}).click();
+    await idle();
+    await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
+    await page.reload();
+    await page.locator(".ow").waitFor({state: "visible"});
+    await page.getByRole("link", {name: "Table names", exact: true}).click();
+    assert.match(await page.locator("#ow-table-tools").innerText(), /Applicant contact details/);
+    await page.getByRole("link", {name: "Image alt text", exact: true}).click();
+    assert.match(await page.locator("#ow-image-tools").innerText(), /Marked decorative/);
+  } finally { await browser.close(); }
+});
+
+async function idleAfterRestore(page) {
+  await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+}
