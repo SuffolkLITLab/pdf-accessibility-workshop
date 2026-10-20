@@ -857,6 +857,7 @@ class OfficeEngine:
         languages = []
         sizes = []
         unresolved_language = False
+        unresolved_size = False
         for run in descendants(shape, "r") + descendants(shape, "fld"):
             if not text(run).strip():
                 continue
@@ -902,7 +903,9 @@ class OfficeEngine:
                 try:
                     sizes.append(int(size) / 100)
                 except ValueError:
-                    pass
+                    unresolved_size = True
+            else:
+                unresolved_size = True
         obj["languages"] = sorted(set(languages))
         obj["font_sizes"] = sorted(set(sizes))
         self.finding(
@@ -920,12 +923,19 @@ class OfficeEngine:
             "pptx.text.readability",
             (
                 "needs_review"
-                if any(s < 18 for s in sizes) or len(text(shape)) > 700
+                if unresolved_size
+                or not sizes
+                or any(s < 18 for s in sizes)
+                or len(text(shape)) > 700
                 else "pass"
             ),
             "Review type size and text density for the audience. The 18-point/700-character thresholds are advice, not WCAG failures.",
             obj,
-            evidence={"resolved_sizes": sizes, "text_length": len(text(shape))},
+            evidence={
+                "resolved_sizes": sizes,
+                "unresolved_font_size": unresolved_size or not sizes,
+                "text_length": len(text(shape)),
+            },
         )
         self.finding(
             "pptx.text.contrast",

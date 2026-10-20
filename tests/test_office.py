@@ -359,3 +359,17 @@ def test_signed_pdf_cannot_be_rewritten():
         repair.status_code == 400
         and "inspection-only" in repair.json["error"]["message"]
     )
+
+
+def test_unresolved_pptx_font_size_is_not_a_pass():
+    data = pptx_bytes()
+    package = Package(data)
+    for name, root in package.roots.items():
+        for node in root.iter():
+            if "sz" in node.attrib:
+                del node.attrib["sz"]
+                package.touch(name)
+    report = OfficeEngine().inspect(package.write(), "Training.pptx")
+    rows = [f for f in report["findings"] if f["rule_id"] == "pptx.text.readability"]
+    assert rows and all(row["outcome"] == "needs_review" for row in rows)
+    assert all(row["evidence"]["unresolved_font_size"] for row in rows)
