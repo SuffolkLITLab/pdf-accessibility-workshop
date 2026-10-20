@@ -1,0 +1,11 @@
+{
+  "name": "pdf-accessibility-workshop",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.node.test.js",
+    "check": "node --check web/static/pdf_accessibility_workshop.js && node --check web/static/app.js"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

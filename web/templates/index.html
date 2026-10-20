@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF accessibility workshop</title>
+<link rel="icon" href="/static/brand/lit-favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/litlabtheme/bootstrap-theme.css">
+<link rel="stylesheet" href="/assets/litlabtheme/variables.css">
+<link rel="stylesheet" href="/assets/litlabtheme/custom.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600;700;800&amp;display=swap">
+<link rel="stylesheet" href="/assets/pdf_accessibility_workshop.css">
+<link rel="stylesheet" href="/static/site.css"></head>
+<body><div id="app" class="lit-site">
+<a class="lit-skip" href="#main-content">Skip to content</a>
+<header class="lit-header">
+<a class="lit-logo" href="https://suffolklitlab.org/"><img src="/static/brand/lit-lab-logo-large.svg" alt="LIT Legal Innovation &amp; Technology Lab, Suffolk University Law School"></a>
+<p class="lit-header-title">PDF accessibility workshop</p>
+</header>
+<nav class="lit-nav" aria-label="LIT Lab"><a href="https://suffolklitlab.org/">LIT Lab home</a><a href="https://suffolklitlab.org/projects/">Projects</a><a href="https://suffolklitlab.org/contact/">Contact</a></nav>
+<main id="main-content" class="lit-content" tabindex="-1">
+<h1>PDF accessibility workshop</h1>
+<p class="intro">Help people read, navigate, and understand your document.</p>
+<ol><li><strong>Find problems</strong><span>Inspect your PDF and apply routine repairs.</span></li>
+<li><strong>Review the details</strong><span>Check names, reading order, headings, images, and more.</span></li>
+<li><strong>Test and export</strong><span>Listen to the reading order and save your reviewed PDF.</span></li></ol>
+<section id="saved-reviews" aria-labelledby="saved-heading" hidden><h2 id="saved-heading">Your saved reviews</h2><ul></ul></section>
+<form id="upload-form"><label for="pdf-file">Choose a PDF to review</label>
+<input id="pdf-file" type="file" accept="application/pdf,.pdf" required aria-describedby="privacy">
+<button type="submit">Open workshop →</button></form>
+<p id="privacy">PDFs are processed temporarily on the server. AI drafts send relevant content to OpenAI only when you request them. Reviews are saved in this browser, including the PDF and your decisions. You can resume them here after reloading. Clear a saved review to remove it from this browser.</p>
+</main>
+<footer class="lit-footer">
+<div class="lit-footer-inner">
+<a href="https://suffolklitlab.org/" class="lit-footer-logo"><img src="/static/brand/lit-lab-logo-large-white.svg" alt="Suffolk University Law School Legal Innovation &amp; Technology Lab"></a>
+<div><p>A tool from the <a href="https://suffolklitlab.org/">Suffolk LIT Lab</a>.</p>
+<p>Using technology and design to improve access to justice.</p>
+<nav aria-label="Footer"><a href="https://github.com/SuffolkLITLab/pdf-accessibility-workshop">Source code</a><a href="https://suffolklitlab.org/contact/">Contact the Lab</a><a href="https://suffolklitlab.org/terms/">Terms &amp; privacy</a></nav></div>
+</div></footer></div><div id="notice" role="alert" hidden><span></span><button type="button" aria-label="Dismiss message">×</button></div>
+    <div id="a11y-workshop" class="aw" role="dialog" aria-modal="true" aria-labelledby="aw-product-name" hidden>
+        <header class="aw-topbar">
+            <div class="aw-brand">
+                <h1 id="aw-product-name" class="aw-product">PDF accessibility workshop</h1>
+                <p class="aw-file"><span class="aw-mono" data-aw-ref="filename"></span><span class="aw-muted" data-aw-ref="file-meta"></span></p>
+            </div>
+            <div class="aw-top-actions">
+                <span id="save-status" role="status" aria-live="polite"></span>
+                <button type="button" class="aw-btn aw-btn-secondary aw-btn-small" data-aw="undo" disabled>Undo</button>
+                <details class="aw-menu">
+                    <summary class="aw-btn aw-btn-secondary aw-btn-small">History</summary>
+                    <div class="aw-menu-panel" data-aw-ref="history"></div>
+                </details>
+                <button type="button" class="aw-btn aw-btn-quiet aw-btn-small" data-aw="close">&#8592; Choose PDF</button>
+            </div>
+        </header>
+        <div class="aw-body">
+            <div class="aw-rail" data-aw-ref="rail"></div>
+            <div class="aw-main" data-aw-ref="main"></div>
+        </div>
+        <div class="aw-busy" data-aw-ref="busy" hidden>
+            <div class="aw-busy-card"><span class="aw-spinner" aria-hidden="true"></span><span data-aw-ref="busy-text"></span></div>
+        </div>
+        <div class="aw-sr" role="status" aria-live="polite" data-aw-ref="status"></div>
+    </div>
+<script id="workshop-config" type="application/json">{{ config | tojson }}</script>
+<script type="module" src="/static/app.js"></script></body></html>

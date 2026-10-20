@@ -1,0 +1,55 @@
+/* Landing-page branding is scoped to .lit-site; the workshop uses its original theme. */
+@font-face { font-family: "Albert Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("brand/albert-sans-regular.woff2") format("woff2"); }
+@font-face { font-family: "Albert Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("brand/albert-sans-bold.woff2") format("woff2"); }
+.lit-site { --lit-navy: #15284b; --lit-gold: #bc912c; min-height: 100vh; background: snow; color: #4e4f53; font-family: "Albert Sans", Arial, sans-serif; font-size: 18px; line-height: 1.5; }
+.lit-site a { color: var(--lit-navy); text-decoration: underline; text-underline-offset: .18em; }
+.lit-site :focus-visible { outline: 3px solid #15284b; outline-offset: 4px; }
+.lit-site .lit-skip { position: absolute; top: -100px; left: 16px; z-index: 10; padding: 12px; background: white; }
+.lit-site .lit-skip:focus { top: 12px; }
+.lit-header { display: flex; align-items: center; gap: 36px; min-height: 180px; background: var(--lit-navy); }
+.lit-logo { display: flex; align-items: center; justify-content: center; align-self: stretch; flex: 0 0 390px; padding: 24px 48px 24px 32px; background: white; border-right: 8px solid var(--lit-gold); transform: skew(-20deg); margin-left: -35px; }
+.lit-logo img { display: block; width: 290px; max-width: 100%; height: auto; transform: skew(20deg); }
+.lit-header-title { margin: 0; padding: 24px 36px 24px 0; font-size: clamp(26px, 3.2vw, 44px); color: #fdb924; font-weight: 400; line-height: 1.2; }
+.lit-nav { display: flex; flex-wrap: wrap; gap: 24px; padding: 9px max(24px, calc((100vw - 1120px) / 2)); background: #70625a; font-size: 16px; }
+.lit-site .lit-nav a { color: white; text-decoration: none; }
+.lit-site .lit-nav a:hover { text-decoration: underline; }
+.lit-site .lit-header :focus-visible, .lit-site .lit-nav :focus-visible, .lit-site .lit-footer :focus-visible { outline-color: #fdb924; }
+.lit-content { max-width: 1000px; margin: 0 auto; padding: 40px 32px 48px; }
+.lit-content h1 { color: var(--lit-navy); font-family: inherit; font-size: clamp(30px, 3.5vw, 46px); font-weight: 700; line-height: 1.2; margin: 0 0 18px; }
+.lit-content .intro { font-size: 21px; margin: 0 0 28px; }
+.lit-content ol { display: flex; gap: 30px; list-style-position: inside; padding: 24px 0; border-top: 1px solid #d6d9df; border-bottom: 1px solid #d6d9df; margin: 28px 0; }
+.lit-content li { flex: 1; color: var(--lit-navy); }
+.lit-content li span { display: block; color: #4e4f53; font-size: 16px; margin-top: 8px; }
+.lit-content form { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding: 24px; background: white; border: 1px solid #c5cbd6; border-top: 4px solid var(--lit-gold); }
+.lit-content form label { width: 100%; font-weight: 700; color: var(--lit-navy); }
+.lit-content input { max-width: 100%; min-width: 0; flex: 1; font: inherit; }
+.lit-content button { font: inherit; cursor: pointer; border: 2px solid var(--lit-navy); border-radius: 3px; background: var(--lit-navy); color: white; padding: 12px 24px; font-weight: 700; }
+.lit-content button:hover { background: #263e67; }
+.lit-content #privacy { font-size: 15px; line-height: 1.6; margin: 18px 0 0; }
+.lit-footer { background: var(--lit-navy); color: white; border-top: 5px solid var(--lit-gold); }
+.lit-footer-inner { max-width: 1120px; margin: auto; display: flex; align-items: center; gap: 64px; padding: 36px 32px; font-size: 16px; }
+.lit-footer-logo { flex: 0 0 270px; }
+.lit-footer-logo img { width: 270px; max-width: 100%; height: auto; }
+.lit-footer p { margin: 0 0 12px; }
+.lit-site .lit-footer a { color: white; }
+.lit-footer nav { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+#notice { position: fixed; bottom: 20px; left: 5%; width: 90%; z-index: 100000; background: #fff; color: #15284b; border: 2px solid #996000; padding: 18px; border-radius: 6px; box-shadow: 0 5px 30px #0003; }
+#notice button { float: right; background: none; border: none; font-size: 1.5rem; }
+@media (max-width: 700px) {
+  .lit-header { flex-direction: column; gap: 0; }
+  .lit-logo { transform: none; margin: 0; border-right: 0; border-bottom: 5px solid var(--lit-gold); flex-basis: auto; padding: 20px; }
+  .lit-logo img { transform: none; width: 260px; }
+  .lit-header-title { padding: 22px; text-align: center; }
+  .lit-content { padding: 28px 20px 36px; }
+  .lit-content ol { flex-direction: column; gap: 20px; }
+  .lit-content input, .lit-content button { flex-basis: 100%; }
+  .lit-footer-inner { flex-direction: column; align-items: flex-start; gap: 24px; padding: 30px 24px; }
+  .lit-footer-logo { flex-basis: auto; }
+}
+.lit-content #saved-reviews { margin: 24px 0; }
+.lit-content #saved-reviews h2 { font: 700 24px "Albert Sans", Arial, sans-serif; color: #15284b; }
+.lit-content #saved-reviews ul { padding: 0; list-style: none; }
+.lit-content #saved-reviews li { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid #c5cbd6; }
+.lit-content #saved-reviews a { flex: 1; overflow-wrap: anywhere; }
+.lit-content #saved-reviews button { font-size: 14px; padding: 6px 12px; }
+.aw #save-status { font-size: 12px; max-width: 160px; color: var(--aw-muted); }
