@@ -174,5 +174,19 @@ def validation_result(job_id):
 @api.post("preview")
 def preview():
     from workshop.office.preview import convert
+
     source, name = uploaded()
-    return jsonify(success=True, data=convert(source, name, request.form.get("expected_sha256")))
+    return jsonify(
+        success=True, data=convert(source, name, request.form.get("expected_sha256"))
+    )
+
+
+@api.post("ai-drafts")
+def ai_drafts():
+    from workshop.office.ai_drafts import draft_repairs
+
+    source, name = uploaded()
+    return jsonify(
+        success=True,
+        data=draft_repairs(source, name, request.form.get("expected_sha256")),
+    )

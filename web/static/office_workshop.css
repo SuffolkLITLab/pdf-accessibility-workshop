@@ -147,3 +147,23 @@
 .ow .ow-inspector label { margin-top: .6rem; }
 .ow .ow-inspector .ow-repair { margin-top: .75rem; }
 @media (max-width: 1050px) { .ow .ow-workspace { grid-template-columns: 1fr; } .ow .ow-inspector { max-height: none; } }
+/* Quiet editing surface: retain only the selected-block cue and pane divider. */
+.ow .ow-document-view { border: 0; padding: 0; background: transparent; }
+.ow .ow-document-sheet { box-shadow: none; padding: 1.5rem 2rem; }
+.ow .ow-inspector { border: 0; border-left: 1px solid #d5dcd8; background: transparent; }
+.ow .ow-repair, .ow .ow-headings, .ow .ow-object-list { border: 0; background: transparent; padding: .5rem 0; }
+.ow .ow-native-block { border: 0; border-left: 2px solid transparent; padding: .3rem .65rem; }
+.ow .ow-native-block:hover { border-color: #b7c7d8; }
+.ow .ow-native-block.ow-block-selected { border: 0; border-left: 2px solid #1766a6; background: #f3f7fb; }
+.ow .ow-block-handle { position: absolute; top: 0; right: 0; opacity: 0; font-size: 11px; border: 0; background: white; z-index: 1; }
+.ow .ow-native-block:hover > .ow-block-handle, .ow .ow-native-block:focus-within > .ow-block-handle { opacity: 1; }
+.ow .ow-findings li { border: 0; border-bottom: 1px solid #d5dcd8; background: transparent; padding: .7rem 0; }
+.ow .ow-ai-drafts { padding: .5rem 0 1rem; }
+.ow .ow-ai-drafts > small { display: inline-block; color: #475569; margin-left: .5rem; }
+.ow .ow-draft-list { list-style: none; padding: 0; }
+.ow .ow-draft-list li { padding: .65rem 0; border-bottom: 1px solid #d5dcd8; }
+.ow .ow-draft-list label { display: flex; gap: .7rem; margin: 0; font-weight: normal; }
+.ow .ow-draft-list input { flex-shrink: 0; }
+.ow .ow-draft-list label span > span, .ow .ow-draft-list small { display: block; margin-top: .25rem; }
+.ow .ow-draft-list small { color: #475569; }
+@media (max-width: 1050px) { .ow .ow-inspector { border: 0; border-top: 1px solid #d5dcd8; } }

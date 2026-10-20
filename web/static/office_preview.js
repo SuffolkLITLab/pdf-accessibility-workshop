@@ -27,7 +27,10 @@ export function nativePreview(report, selected, onSelect) {
       const content = el(heading ? `h${heading}` : "p", obj.text || "", {class: role === "title" ? "ow-document-title" : ""});
       node.append(content);
       for (const child of block.children || []) draw(child, node);
-      if (!obj.text && !block.children?.length) content.textContent = "(No paragraph text)";
+      if (!obj.text && !block.children?.length) {
+        content.textContent = "\u00a0";
+        choose.setAttribute("aria-label", "Empty paragraph settings");
+      }
     } else if (block.kind === "image") {
       if (obj.preview) node.append(el("img", null, {src: obj.preview, alt: obj.decorative ? "" : obj.value || "Image awaiting description"}));
       else node.append(el("p", "Image preview unavailable"));

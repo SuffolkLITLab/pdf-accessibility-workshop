@@ -6,6 +6,9 @@ primary_region = "ewr"
 
 [env]
   OPENAI_MODEL = "gpt-5-mini"
+  WORKSHOP_LIMITS_ENABLED = "1"
+  WORKSHOP_USAGE_DB = "/data/usage.sqlite3"
+  AI_CALLS_PER_DAY = "40"
 
 [http_service]
   internal_port = 8080
@@ -29,3 +32,7 @@ primary_region = "ewr"
 [[vm]]
   size = "shared-cpu-2x"
   memory = "2gb"
+
+[[mounts]]
+  source = "workshop_usage"
+  destination = "/data"

@@ -121,6 +121,7 @@ export function createOfficeWorkshop(host) {
           state.headingSelection = [];
           state.blockSelection = [];
           state.layoutPreview = null;
+          state.aiDrafts = null;
           state.previewMode = "native";
           await refreshInspection();
           render();
@@ -174,15 +175,10 @@ export function createOfficeWorkshop(host) {
     main.append(
       element(
         "p",
-        `${s.problems_found || 0} problems found · ${state.receipts.length} repairs applied · ${s.review_remaining || 0} machine-identified review items · ${s.checks_unavailable || 0} checks unavailable`,
+        `${s.problems_found || 0} problems found · ${state.receipts.length} changes · ${s.review_remaining || 0} to review · ${s.checks_unavailable || 0} checks unavailable`,
       ),
     );
-    main.append(
-      element(
-        "p",
-        "Automated findings, your review, external checks, and reader testing are separate evidence. A review decision does not erase a failing check.",
-      ),
-    );
+    if (state.step === 0) main.append(element("p", "Automated findings and your review are recorded separately."));
     if (!state.inspection.edit_policy.editable)
       main.append(
         element("p", state.inspection.edit_policy.explanation, {
@@ -190,10 +186,11 @@ export function createOfficeWorkshop(host) {
         }),
       );
     if (state.step === 0) {
+      aiDraftControls(main);
       main.append(
         element(
           "p",
-          "Office files are inspected without automatic changes or AI calls. Select a finding to review its native object.",
+          "Choose a finding to review it in the document.",
         ),
       );
       findings(main);
@@ -277,6 +274,7 @@ export function createOfficeWorkshop(host) {
     state.headingSelection = [];
     state.blockSelection = [];
     state.layoutPreview = null;
+    state.aiDrafts = null;
     state.previewMode = "native";
     render();
     root.querySelector("#" + focusId)?.focus();
@@ -373,6 +371,59 @@ export function createOfficeWorkshop(host) {
       parent.append(section);
     }
   }
+  function aiDraftControls(parent) {
+    if (state.format !== "docx") return;
+    const section = element("section", null, {class: "ow-ai-drafts", "aria-label": "AI repair drafts"});
+    section.append(button("Draft repairs with AI", async () => {
+      const result = await request("ai-drafts", {expected_sha256: sha()});
+      if (result.source_sha256 !== sha()) throw new Error("These drafts target a different version.");
+      state.aiDrafts = {...result, selected: []};
+      render();
+      root.querySelector(".ow-ai-drafts h3")?.focus();
+    }, !host.aiEnabled?.() || !state.inspection.edit_policy.editable));
+    const proposals = state.aiDrafts;
+    if (!proposals || proposals.source_sha256 !== sha()) {
+      section.append(element("small", "Sends document text and up to four image previews to OpenAI. You approve each change."));
+    } else {
+      section.append(element("h3", "Suggested repairs", {tabindex: "-1"}), element("p", "Choose the changes you want to apply."));
+      const selected = new Set(proposals.selected || []);
+      const list = element("ul", null, {class: "ow-draft-list"});
+      for (const [index, suggestion] of proposals.suggestions.entries()) {
+        const row = element("li");
+        const label = element("label", null);
+        const check = element("input", null, {type: "checkbox", "aria-label": `Approve ${labels[suggestion.action] || suggestion.action}: ${suggestion.label}`});
+        check.checked = selected.has(index);
+        check.onchange = () => {
+          check.checked ? selected.add(index) : selected.delete(index);
+          proposals.selected = [...selected];
+          apply.disabled = selected.size === 0;
+          host.onStateChange();
+        };
+        const text = element("span", null);
+        const before = roles[suggestion.before] || suggestion.before;
+        const after = roles[suggestion.value] || suggestion.value || "Decorative";
+        text.append(element("strong", labels[suggestion.action] || suggestion.action),
+          element("span", suggestion.label), element("span", `${before} → ${after}`), element("small", suggestion.reason));
+        label.append(check, text); row.append(label);
+        row.append(button("Show in document", () => {state.selected = suggestion.object_id; state.blockSelection = [suggestion.object_id]; state.step = 1; render(); root.querySelector("#ow-selected-object")?.focus();}));
+        list.append(row);
+      }
+      if (!proposals.suggestions.length) section.append(element("p", "No supported repairs were proposed."));
+      section.append(list);
+      const apply = button("Apply selected drafts", () => applyDecisions([...selected].map(i => {
+        const {object_id, action, value} = proposals.suggestions[i]; return {object_id, action, value};
+      })), selected.size === 0);
+      section.append(apply);
+      if (proposals.review_notes.length) {
+        const notes = element("details"); notes.append(element("summary", "Other items to review"));
+        for (const note of proposals.review_notes) notes.append(element("p", note));
+        section.append(notes);
+      }
+      if (proposals.excluded_proposals) section.append(element("p", `${proposals.excluded_proposals} unsupported proposals were omitted.`));
+      if (proposals.objects_considered < proposals.objects_total) section.append(element("small", `AI reviewed ${proposals.objects_considered} of ${proposals.objects_total} objects. The native scan still covers the document.`));
+    }
+    parent.append(section);
+  }
   function review(parent) {
     if (state.format !== "docx") { reviewSettings(parent); return; }
     const tools = element("nav", null, {class: "ow-tool-links", "aria-label": "DOCX repair tools"});
@@ -381,7 +432,8 @@ export function createOfficeWorkshop(host) {
       link.onclick = event => {event.preventDefault(); const target = root.querySelector("#" + id); target.open = true; target.querySelector("summary").focus(); target.scrollIntoView({block: "start"});};
       tools.append(link);
     }
-    parent.append(tools, element("p", "Click a document block to edit its settings. Ctrl/Cmd-click or Shift-click selects multiple blocks; checkboxes in the settings panel also support keyboard selection."));
+    parent.append(tools);
+    aiDraftControls(parent);
     const workspace = element("div", null, {class: "ow-workspace"});
     const viewer = element("section", null, {class: "ow-document-view", "aria-label": "Document preview"});
     const inspector = element("section", null, {class: "ow-inspector", "aria-label": "Selected block settings"});
@@ -404,9 +456,9 @@ export function createOfficeWorkshop(host) {
     };
     const updateInspector = () => {
       inspector.replaceChildren();
-      inspector.append(element("h3", "Block settings"));
+
       const selected = state.blockSelection || [];
-      inspector.append(element("p", `${selected.length} block(s) selected.`));
+      if (selected.length > 1) inspector.append(element("p", `${selected.length} blocks selected.`));
       const merge = button("Merge adjacent blocks", async () => {
         const ids = state.blockSelection || [];
         await applyDecisions([{object_id: ids[0], action: "merge_paragraphs", value: ids}]);
@@ -415,9 +467,9 @@ export function createOfficeWorkshop(host) {
       mergePanel.open = selected.length > 1;
       mergePanel.append(element("summary", "Merge selected paragraphs"), merge,
         element("p", "Combine adjacent text paragraphs into one block, with line breaks between their text and the first paragraph’s settings. Undo restores the original blocks."));
-      inspector.append(mergePanel);
+      if (selected.length > 1) inspector.append(mergePanel);
       const selection = element("details", null, {class: "ow-checkbox-selection"});
-      selection.append(element("summary", "Select adjacent paragraphs with checkboxes"));
+      selection.append(element("summary", "Select multiple paragraphs"));
       for (const obj of state.inspection.objects.filter(o => o.kind === "paragraph")) {
         const label = element("label", null, {class: "ow-select-paragraph"});
         const check = element("input", null, {type: "checkbox", "data-select-id": obj.id});
@@ -432,12 +484,12 @@ export function createOfficeWorkshop(host) {
     const display = () => {
       surface.replaceChildren();
       if (state.previewMode === "pdf" && state.layoutPreview?.source_sha256 === sha()) {
-        surface.append(element("p", "Converted layout preview. Fonts and pagination may differ from Word. Click a marker to select its native block; use Document blocks where a marker is unavailable."));
+        surface.append(element("p", "Layout preview · Click a marker to edit."));
         pdfPreview(surface, state.layoutPreview, host.pdfjsLib, choose, error => {
           surface.append(element("p", "PDF display unavailable. Choose Document blocks to continue.", {role: "alert"}));
         });
       } else {
-        surface.append(element("p", "Simulated document view: native paragraphs, images and tables; page layout is approximate."));
+        surface.append(element("p", "Click a block to edit · Approximate layout"));
         surface.append(nativePreview(state.inspection, state.blockSelection || [state.selected], choose));
         mark();
       }
@@ -463,7 +515,8 @@ export function createOfficeWorkshop(host) {
   }
   function reviewSettings(parent) {
     const select = element("select", null, { id: "ow-object" });
-    parent.append(element("label", "Document object", { for: "ow-object" }));
+    const picker = element("details");
+    picker.append(element("summary", "Choose another block"), element("label", "Document object", { for: "ow-object" }));
     for (const obj of state.inspection.objects)
       select.append(
         element("option", `${obj.kind}: ${obj.label}`, { value: obj.id }),
@@ -478,8 +531,9 @@ export function createOfficeWorkshop(host) {
       state.selected = select.value;
       render();
     };
-    parent.append(select);
-    parent.append(element("h3", obj.label, {id: "ow-selected-object", tabindex: "-1"}));
+    picker.append(select);
+    parent.append(element("h3", obj.kind === "paragraph" ? "Paragraph" : obj.kind === "metadata" ? "Document title" : obj.kind === "language" ? "Language" : obj.kind[0].toUpperCase() + obj.kind.slice(1), {id: "ow-selected-object", tabindex: "-1"}));
+    parent.append(picker);
     const location = element("details");
     location.append(element("summary", "Technical location"), element("p", `${obj.target.part} · object ${obj.target.object_id || obj.target.element_path || "document root"}`));
     parent.append(location);
@@ -491,8 +545,7 @@ export function createOfficeWorkshop(host) {
           class: "ow-preview",
         }),
       );
-    if (obj.style)
-      parent.append(element("p", "Native paragraph style: " + obj.style));
+    if (obj.style) location.append(element("p", "Native style: " + obj.style));
     if (obj.text) parent.append(element("pre", obj.text, { class: "ow-text" }));
     if (obj.rows) {
       const table = element("table");
@@ -543,11 +596,11 @@ export function createOfficeWorkshop(host) {
         check.hidden = checkLabel.hidden = action.value !== "set_table_header";
         valueLabel.textContent = action.value === "set_table_title" ? "Table name (accessible title)" : action.value === "set_alt_text" ? "Alternative text" : "Approved value or description";
         hint.textContent = action.value === "set_table_title"
-          ? "Sets the table’s accessible title in Word table properties. Cell text and visible captions stay unchanged."
+          ? "Names the table without inserting a visible caption."
           : action.value === "set_alt_text"
-          ? "Describe the information this image adds. Use Mark decorative for an image that adds no information; this removes its description."
+          ? "Describe what the image communicates."
           : action.value === "set_paragraph_role"
-          ? "Applies to this entire paragraph. Text and inline formatting are preserved; the paragraph style may change its appearance."
+          ? "Applies to the whole paragraph."
           : action.value === "set_table_header" && state.format === "pptx"
             ? "PowerPoint first-row formatting is limited package evidence. Verify header behavior with a screen reader in PowerPoint."
             : action.value.includes("language")
@@ -605,8 +658,10 @@ export function createOfficeWorkshop(host) {
       state.drafts["notes:" + obj.id] = notes.value;
       host.onStateChange();
     };
-    parent.append(
-      element("h3", "Human review"),
+    const reviewNotes = element("details", null, {class: "ow-review-notes"});
+    reviewNotes.open = !!previous;
+    reviewNotes.append(
+      element("summary", "Review notes"),
       element("label", "Review notes", { for: "ow-review-notes" }),
       notes,
       button("Record my review of this object", () => {
@@ -626,6 +681,7 @@ export function createOfficeWorkshop(host) {
         render();
       }),
     );
+    parent.append(reviewNotes);
     if (previous)
       parent.append(
         element("p", "Review recorded for this version: " + previous.notes),

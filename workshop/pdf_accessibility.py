@@ -305,6 +305,9 @@ def describe_images_with_ai(
                 messages=cast(List[Dict[str, str]], conversation),
             )
         except Exception as exc:
+            from .usage import UsageError
+            if isinstance(exc, UsageError):
+                raise
             results.append(
                 {
                     "assetId": asset_id,

@@ -47,6 +47,7 @@ for (const format of ["docx", "pptx"])
       await page.waitForFunction(
         () => document.querySelector(".ow").getAttribute("aria-busy") === null,
       );
+      await page.locator(".ow-review-notes > summary").click();
       await page
         .locator("#ow-review-notes")
         .fill("Confirmed the title describes this document.");
@@ -241,5 +242,53 @@ test("Gotenberg PDF preview markers select native DOCX objects", {skip: !process
     assert.equal(await page.locator(".ow-pdf-marker").count(), 0);
     assert.ok(await page.getByRole("button", {name: "Generate PDF layout preview", exact: true}).isVisible());
     assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});
+
+test("DOCX AI drafts require approval, persist, and use undoable repairs", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.route("**/", async route => {
+      const response = await route.fetch();
+      await route.fulfill({response, body: (await response.text()).replace('"aiEnabled": false', '"aiEnabled": true')});
+    });
+    let inspection, calls = 0;
+    page.on("response", async response => {
+      if (response.url().endsWith("/api/documents/inspect")) inspection = (await response.json()).data;
+    });
+    await page.route("**/api/documents/ai-drafts", async route => {
+      calls++;
+      const title = inspection.objects.find(o => o.kind === "metadata");
+      await route.fulfill({json: {success: true, data: {
+        source_sha256: inspection.version.sha256, draft: true,
+        suggestions: [{object_id: title.id, action: "set_title", value: "Reviewed AI title", before: title.value || "(not set)", label: "Document title", reason: "Use the visible title.", draft: true}],
+        review_notes: [], objects_considered: inspection.objects.length, objects_total: inspection.objects.length,
+      }}});
+    });
+    await page.goto(base);
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "office-example.docx"));
+    await page.getByRole("button", {name: "Open workshop"}).click();
+    await page.locator(".ow").waitFor({state: "visible"});
+    assert.equal(calls, 0);
+    await page.getByRole("button", {name: "Draft repairs with AI", exact: true}).click();
+    const choice = page.locator(".ow-draft-list input[type=checkbox]");
+    await choice.waitFor();
+    assert.equal(await choice.isChecked(), false);
+    assert.equal(await page.getByRole("button", {name: "Apply selected drafts"}).isDisabled(), true);
+    await choice.check();
+    await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
+    await page.reload();
+    await choice.waitFor();
+    assert.equal(await choice.isChecked(), true);
+    assert.equal(calls, 1);
+    await page.getByRole("button", {name: "Apply selected drafts"}).click();
+    await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    assert.equal(await choice.count(), 0);
+    await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    assert.equal(await page.locator("#ow-value").inputValue(), "Reviewed AI title");
+    await page.getByRole("button", {name: "Undo last repair"}).click();
+    await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    assert.notEqual(await page.locator("#ow-value").inputValue(), "Reviewed AI title");
   } finally { await browser.close(); }
 });

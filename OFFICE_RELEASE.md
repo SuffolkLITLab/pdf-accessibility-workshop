@@ -43,7 +43,7 @@ Neither a no-finding detector result nor a human note is a conformance certifica
 
 This is the first native inspection/controlled-repair release, not completion of
 all eight milestones. A Gotenberg PDF layout preview is available, with native bookmark identity markers.
-It is not a validated PDF export. No Office AI,
+It is not a validated PDF export. Explicit, author-approved DOCX AI repair drafts are available. No
 complex field-link editor, slide reordering, SmartArt reconstruction, caption
 editing, paragraph splitting/list restructuring, or full effective-contrast resolver is enabled.
 Unresolved contrast, layout/master semantics, complex tables and media remain

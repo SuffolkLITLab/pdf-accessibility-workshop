@@ -11,6 +11,7 @@ import tempfile
 import uuid
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
+from workshop.usage import UsageError
 from flask import Blueprint, Response, current_app, jsonify, request
 
 app = Blueprint("workshop_api", __name__)
@@ -101,6 +102,8 @@ def _accessibility_json_response(request_id: str, build_data: Any) -> Response:
         return jsonify(
             {"success": True, "request_id": request_id, "data": build_data()}
         )
+    except UsageError:
+        raise
     except DashboardAPIValidationError as exc:
         error_type, message, status = "validation_error", exc.message, exc.status_code
     except (PDFAccessibilityError, json.JSONDecodeError) as exc:

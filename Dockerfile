@@ -12,6 +12,6 @@ COPY web web
 COPY LICENSE THIRD_PARTY_NOTICES.md ./
 RUN python scripts/dependency_inventory.py > /app/runtime-dependencies.json
 RUN useradd --create-home workshop
-USER workshop
+ENTRYPOINT ["python", "scripts/start_server.py"]
 EXPOSE 8080
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--threads", "4", "--timeout", "240", "web.app:app"]
