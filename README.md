@@ -1,6 +1,6 @@
 # Document accessibility workshop
 
-[Open the workshop](https://pdf-accessibility-workshop.fly.dev/)
+[Open the workshop](https://workshop.suffolklitlab.org/)
 
 A standalone Flask app for reviewing and repairing PDF, DOCX, and PPTX accessibility. Works with
 ordinary documents and interactive forms. Form-control checks are not applicable
@@ -27,6 +27,10 @@ Each review has a `/review/<uuid>` URL. The native file, edits, review decisions
 testing notes, and undo history are saved in **IndexedDB in the current browser**.
 Reloading restores the last completed save without rerunning automatic repairs.
 The upload screen lists saved reviews and lets you delete them.
+
+Browser storage is also specific to the website address. Reviews saved at
+`pdf-accessibility-workshop.fly.dev` remain available there; they do not
+automatically move to `workshop.suffolklitlab.org`. The old address stays online.
 
 The URL is not a share link: another browser/device cannot retrieve the document.
 Clearing site data removes saved reviews. Private browsing and storage quotas may
@@ -66,6 +70,20 @@ organization, Newark region. Credentials are Fly secrets and are not in the imag
 Import updates through standard input with `flyctl secrets import --app
 pdf-accessibility-workshop`. The app runs as an unprivileged user on one 2 GB
 machine with HTTPS, automatic stop/start, and a `/healthz` check.
+
+## Custom domain
+
+`workshop.suffolklitlab.org` is attached to the Fly app with an automatically
+renewed Let's Encrypt certificate. Cloudflare has a DNS-only CNAME:
+
+```
+workshop.suffolklitlab.org → pe30dd3.pdf-accessibility-workshop.fly.dev
+```
+
+TTL is 300 seconds. Fly supplies HTTPS directly. Check certificate status with
+`flyctl certs check workshop.suffolklitlab.org --app pdf-accessibility-workshop`.
+Cloudflare's official `cf` CLI is installed locally; credentials stay in the
+user's Cloudflare configuration, outside this repository.
 
 ## Tests
 
