@@ -8,6 +8,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .routes import app as api
+from .documents import api as document_api
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "web/static"
@@ -16,6 +17,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 app.config.update(WORKSHOP_STANDALONE=True, MAX_CONTENT_LENGTH=32 * 1024 * 1024,
                   MAX_FORM_MEMORY_SIZE=8 * 1024 * 1024)
 app.register_blueprint(api)
+app.register_blueprint(document_api)
 
 
 @app.get("/")
@@ -56,7 +58,7 @@ def response_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["X-Frame-Options"] = "DENY"
-    if request.path.startswith("/pdf-labeler/api/"):
+    if request.path.startswith(("/pdf-labeler/api/", "/api/documents/")):
         response.headers["Cache-Control"] = "no-store"
     return response
 

@@ -2,3 +2,6 @@
 pytest>=8,<10
 pytest-subtests
 reportlab>=4,<5
+
+python-docx==1.2.0
+python-pptx==1.0.2

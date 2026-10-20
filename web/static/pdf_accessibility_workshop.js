@@ -946,7 +946,9 @@ export function createAccessibilityWorkshop(host) {
       if (ws.preexistingTree) ws.treeDecision = "keep";
       initializeDecisions();
       const originalDecisions = snapshotDecisions(ws);
-      const repaired = await runAutomaticRepairs(ws.original);
+      const readOnly = ws.inspection.edit_policy?.editable === false;
+      if (readOnly) host.showError(ws.inspection.edit_policy.explanation);
+      const repaired = readOnly ? ws.original : await runAutomaticRepairs(ws.original);
       await loadWorkingCopy(repaired);
       checkIntegrity();
       if (ws.receipts.length) {

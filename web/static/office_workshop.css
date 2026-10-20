@@ -1,0 +1,106 @@
+.ow .ow-content {
+  padding: 1.5rem;
+  overflow: auto;
+}
+.ow .aw-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem;
+  min-width: 210px;
+}
+.ow .aw-rail button {
+  white-space: normal;
+  text-align: left;
+}
+.ow .aw-rail [aria-current] {
+  background: #002e5d;
+  color: white;
+}
+.ow label {
+  display: block;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+.ow select,
+.ow textarea {
+  display: block;
+  width: 100%;
+  max-width: 850px;
+  padding: 0.65rem;
+  border: 1px solid #64748b;
+  border-radius: 4px;
+  color: #152536;
+  background: white;
+}
+.ow textarea {
+  font: inherit;
+}
+.ow input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+.ow button {
+  margin: 0.4rem 0.4rem 0.4rem 0;
+}
+.ow .ow-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f1f5f9;
+  padding: 1rem;
+}
+.ow .ow-findings {
+  list-style: none;
+  padding: 0;
+}
+.ow .ow-findings li {
+  border-left: 4px solid #51718d;
+  background: #f5f7fa;
+  margin: 1rem 0;
+  padding: 1rem;
+}
+.ow .ow-findings small {
+  display: block;
+}
+.ow .ow-preview {
+  max-width: 100%;
+  max-height: 350px;
+}
+.ow table {
+  border-collapse: collapse;
+}
+.ow td {
+  border: 1px solid #8995a1;
+  padding: 0.5rem;
+}
+.ow :focus-visible {
+  outline: 3px solid #b18420;
+  outline-offset: 3px;
+}
+.ow > [role="status"] {
+  padding: 0.3rem 1rem;
+  margin: 0;
+}
+.ow [hidden] {
+  display: none !important;
+}
+@media (max-width: 700px) {
+  .ow .aw-body {
+    display: block;
+    overflow: auto;
+  }
+  .ow .aw-rail {
+    flex-direction: row;
+    min-width: 0;
+  }
+  .ow .aw-topbar {
+    flex-wrap: wrap;
+  }
+  .ow .aw-main {
+    overflow: visible;
+  }
+}
+.ow .ow-content > p { margin: 0 0 .8rem; }
+.ow .ow-content h3 { margin: 1.2rem 0 .5rem; }
+.ow .ow-content details { margin: .8rem 0; }
+.ow .ow-repair { padding: 1rem; background: white; border: 1px solid #d5dcd8; border-radius: 6px; }

@@ -1,23 +1,29 @@
-# PDF accessibility workshop
+# Document accessibility workshop
 
 [Open the workshop](https://pdf-accessibility-workshop.fly.dev/)
 
-A standalone Flask app for reviewing and repairing PDF accessibility. Works with
+A standalone Flask app for reviewing and repairing PDF, DOCX, and PPTX accessibility. Works with
 ordinary documents and interactive forms. Form-control checks are not applicable
 when a document has no fields.
 
-The workshop finds problems, guides eight reader-facing review tasks, and offers
+The PDF workshop finds problems, guides eight reader-facing review tasks, and offers
 reading-order playback and export. Machine checks, human decisions, and external
 testing remain separate. AI suggestions run only when requested and require human
 confirmation. Exporting never automatically declares PDF/UA conformance.
 
 Originally extracted from [ALDashboard](https://github.com/SuffolkLITLab/docassemble-ALDashboard).
 This repository owns its PDF engine, browser interface, and Flask adapters. It has
-no Docassemble, Redis, database-server, or worker dependency.
+no Docassemble, Redis, or database-server dependency. A bounded in-process worker
+runs veraPDF validation; the Docker image includes veraPDF 1.30.3 and Java.
+
+Office review uses the same find/review/export stages with native semantic views,
+explicit repairs, immutable history, and file/report/manifest downloads. See
+[release scope and remaining work](OFFICE_RELEASE.md) and
+[source/dependency notices](THIRD_PARTY_NOTICES.md).
 
 ## Saved reviews
 
-Each review has a `/review/<uuid>` URL. The PDF, edits, review decisions, external
+Each review has a `/review/<uuid>` URL. The native file, edits, review decisions, external
 testing notes, and undo history are saved in **IndexedDB in the current browser**.
 Reloading restores the last completed save without rerunning automatic repairs.
 The upload screen lists saved reviews and lets you delete them.
@@ -26,7 +32,7 @@ The URL is not a share link: another browser/device cannot retrieve the document
 Clearing site data removes saved reviews. Private browsing and storage quotas may
 prevent saving; the app displays a warning and asks you to export instead. A reload
 during a repair restores the last completed operation. Browser storage is not an
-archival backup—export finished PDFs. All users of the same browser profile can
+archival backup—export finished documents. All users of the same browser profile can
 access its saved reviews.
 
 PDF operations upload a temporary working copy to the server, deleted after the
@@ -72,7 +78,7 @@ npm run check
 npm test
 ```
 
-The reload test starts Flask on port 8187. It uploads a PDF with no fields,
+The reload test starts Flask on port 8187; Office browser tests use 8188. It uploads a PDF with no fields,
 confirms metadata, reloads a saved URL, checks draft and history preservation,
 exports, and deletes the saved review. Set `WORKSHOP_TEST_URL` to run that test
 against a deployed instance using an isolated browser context.

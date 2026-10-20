@@ -62,7 +62,10 @@ def inspect():
     from workshop.pdf_accessibility import inspect_pdf_accessibility
     def build():
         with _uploaded_pdf_path() as (_, path, __):
-            return inspect_pdf_accessibility(path)
+            from workshop.pdf_policy import pdf_edit_policy
+            result = inspect_pdf_accessibility(path)
+            result["edit_policy"] = pdf_edit_policy(path)
+            return result
     return _accessibility_json_response(str(uuid.uuid4()), build)
 
 ACCESSIBILITY_REMEDIATION_ACTIONS = (
@@ -279,6 +282,10 @@ def pdf_labeler_accessibility_remediate() -> Response:
 
     def build() -> Dict[str, Any]:
         with _uploaded_pdf_path() as (filename, input_path, post_data):
+            from workshop.pdf_policy import pdf_edit_policy
+            policy = pdf_edit_policy(input_path)
+            if not policy["editable"]:
+                raise DashboardAPIValidationError(policy["explanation"])
             action = str(post_data.get("action") or "").strip()
             if action not in ACCESSIBILITY_REMEDIATION_ACTIONS:
                 raise DashboardAPIValidationError(
