@@ -167,3 +167,13 @@
 .ow .ow-draft-list label span > span, .ow .ow-draft-list small { display: block; margin-top: .25rem; }
 .ow .ow-draft-list small { color: #475569; }
 @media (max-width: 1050px) { .ow .ow-inspector { border: 0; border-top: 1px solid #d5dcd8; } }
+
+/* Native modal blocks pointer and keyboard actions while AI is running. */
+.ow-ai-progress { width: min(440px, calc(100vw - 3rem)); padding: 2rem; border: 0; border-top: 4px solid #b18420; border-radius: 6px; color: #152536; background: white; font-family: inherit; box-shadow: 0 12px 48px #0003; }
+.ow-ai-progress::backdrop { background: #10233ab3; }
+.ow-ai-progress h2 { margin: 1rem 0 .75rem; font-size: 1.5rem; }
+.ow-ai-progress p { line-height: 1.5; }
+.ow-ai-progress .ow-ai-elapsed { color: #475569; font-size: .9rem; }
+.ow-ai-spinner { display: block; width: 36px; height: 36px; border: 4px solid #dbe4ec; border-top-color: #002e5d; border-radius: 50%; animation: ow-ai-spin 1s linear infinite; }
+@keyframes ow-ai-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ow-ai-spinner { animation: none; } }

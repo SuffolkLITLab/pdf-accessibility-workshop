@@ -49,7 +49,7 @@ export function createOfficeWorkshop(host) {
     status.textContent = "Working…";
     try {
       await fn();
-      status.textContent = "Ready";
+      if (status.textContent === "Working…") status.textContent = "Ready";
     } catch (e) {
       status.textContent = e.message;
       host.showError(e.message);
@@ -70,6 +70,7 @@ export function createOfficeWorkshop(host) {
     const response = await fetch("/api/documents/" + route, {
       method: "POST",
       body: form,
+      ...(route === "ai-drafts" ? {signal: AbortSignal.timeout(180000)} : {}),
     });
     let body;
     try {
@@ -374,13 +375,58 @@ export function createOfficeWorkshop(host) {
   function aiDraftControls(parent) {
     if (state.format !== "docx") return;
     const section = element("section", null, {class: "ow-ai-drafts", "aria-label": "AI repair drafts"});
-    section.append(button("Draft repairs with AI", async () => {
-      const result = await request("ai-drafts", {expected_sha256: sha()});
-      if (result.source_sha256 !== sha()) throw new Error("These drafts target a different version.");
+    const draftButton = button("Draft repairs with AI", async () => {
+      draftButton.disabled = true;
+      draftButton.textContent = "Drafting repairs…";
+      const dialog = element("dialog", null, {
+        class: "ow-ai-progress", "aria-labelledby": "ow-ai-progress-title",
+        "aria-describedby": "ow-ai-progress-detail",
+      });
+      const heading = element("h2", "Drafting repairs…", {id: "ow-ai-progress-title", tabindex: "-1"});
+      const detail = element("p", "AI is reviewing your document. This may take a minute or two.", {id: "ow-ai-progress-detail"});
+      const elapsed = element("p", "Elapsed: 0 seconds", {class: "ow-ai-elapsed", "aria-hidden": "true"});
+      const announcement = element("p", "", {role: "status", "aria-live": "polite"});
+      dialog.append(element("span", null, {class: "ow-ai-spinner", "aria-hidden": "true"}), heading, detail,
+        element("p", "You’ll review the suggestions before any changes are applied."), elapsed, announcement);
+      // A running provider request cannot be cancelled server-side; keep the
+      // modal open until it settles rather than imply that Escape cancels it.
+      dialog.addEventListener("cancel", event => event.preventDefault());
+      dialog.addEventListener("keydown", event => {
+        if (event.key === "Tab") { event.preventDefault(); heading.focus(); }
+      });
+      document.body.append(dialog);
+      dialog.showModal();
+      root.inert = true;
+      heading.focus();
+      const started = Date.now();
+      const timer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - started) / 1000);
+        elapsed.textContent = `Elapsed: ${seconds} seconds`;
+        if (seconds >= 60) announcement.textContent = "Still drafting. Larger documents can take a little longer.";
+        else if (seconds >= 30) announcement.textContent = "Still reviewing your document…";
+      }, 1000);
+      let result;
+      try {
+        result = await request("ai-drafts", {expected_sha256: sha()});
+        if (result.source_sha256 !== sha()) throw new Error("These drafts target a different version.");
+      } catch (error) {
+        if (error.name === "TimeoutError") throw new Error("AI drafting timed out. Your document is unchanged. Please try again later.");
+        throw error;
+      } finally {
+        clearInterval(timer);
+        root.inert = false;
+        dialog.close();
+        dialog.remove();
+        draftButton.disabled = false;
+        draftButton.textContent = "Draft repairs with AI";
+        draftButton.focus();
+      }
       state.aiDrafts = {...result, selected: []};
       render();
       root.querySelector(".ow-ai-drafts h3")?.focus();
-    }, !host.aiEnabled?.() || !state.inspection.edit_policy.editable));
+      status.textContent = `${result.suggestions.length} repair suggestions ready for your review. No changes have been applied.`;
+    }, !host.aiEnabled?.() || !state.inspection.edit_policy.editable);
+    section.append(draftButton);
     const proposals = state.aiDrafts;
     if (!proposals || proposals.source_sha256 !== sha()) {
       section.append(element("small", "Sends document text and up to four image previews to OpenAI. You approve each change."));

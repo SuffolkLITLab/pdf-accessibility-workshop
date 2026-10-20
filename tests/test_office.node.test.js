@@ -249,16 +249,22 @@ test("DOCX AI drafts require approval, persist, and use undoable repairs", async
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.route("**/", async route => {
+    await page.route(url => url.origin === new URL(base).origin && (url.pathname === "/" || url.pathname.startsWith("/review/")), async route => {
       const response = await route.fetch();
       await route.fulfill({response, body: (await response.text()).replace('"aiEnabled": false', '"aiEnabled": true')});
     });
-    let inspection, calls = 0;
+    let inspection, calls = 0, releaseDraft;
+    const pendingDraft = new Promise(resolve => { releaseDraft = resolve; });
     page.on("response", async response => {
       if (response.url().endsWith("/api/documents/inspect")) inspection = (await response.json()).data;
     });
     await page.route("**/api/documents/ai-drafts", async route => {
       calls++;
+      if (calls > 1) {
+        await route.fulfill({status: 429, json: {success: false, error: {message: "AI allowance reached. Manual editing is still available."}}});
+        return;
+      }
+      await pendingDraft;
       const title = inspection.objects.find(o => o.kind === "metadata");
       await route.fulfill({json: {success: true, data: {
         source_sha256: inspection.version.sha256, draft: true,
@@ -272,9 +278,25 @@ test("DOCX AI drafts require approval, persist, and use undoable repairs", async
     await page.locator(".ow").waitFor({state: "visible"});
     assert.equal(calls, 0);
     await page.getByRole("button", {name: "Draft repairs with AI", exact: true}).click();
+    const progress = page.locator("dialog.ow-ai-progress");
+    await progress.waitFor({state: "visible"});
+    assert.equal(await page.getByRole("button", {name: "Drafting repairs…", includeHidden: true}).isDisabled(), true);
+    assert.equal(await page.locator(".ow").evaluate(node => node.inert), true);
+    assert.equal(await progress.evaluate(node => node.contains(document.activeElement)), true);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Tab");
+    assert.equal(await progress.isVisible(), true);
+    assert.equal(await progress.evaluate(node => node.contains(document.activeElement)), true);
+    await page.emulateMedia({reducedMotion: "reduce"});
+    assert.equal(await page.locator(".ow-ai-spinner").evaluate(node => getComputedStyle(node).animationName), "none");
+    await page.emulateMedia({reducedMotion: "no-preference"});
+    assert.equal(await page.locator(".ow-ai-spinner").evaluate(node => getComputedStyle(node).animationName), "ow-ai-spin");
+    releaseDraft();
     const choice = page.locator(".ow-draft-list input[type=checkbox]");
     await choice.waitFor();
     assert.equal(await choice.isChecked(), false);
+    assert.equal(await progress.count(), 0);
+    assert.equal(await page.locator(".ow").evaluate(node => node.inert), false);
     assert.equal(await page.getByRole("button", {name: "Apply selected drafts"}).isDisabled(), true);
     await choice.check();
     await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
@@ -290,5 +312,10 @@ test("DOCX AI drafts require approval, persist, and use undoable repairs", async
     await page.getByRole("button", {name: "Undo last repair"}).click();
     await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
     assert.notEqual(await page.locator("#ow-value").inputValue(), "Reviewed AI title");
+    await page.getByRole("button", {name: "Draft repairs with AI", exact: true}).click();
+    await page.waitForFunction(() => document.querySelector(".ow > [role=status]").textContent.includes("AI allowance reached"));
+    assert.equal(await progress.count(), 0);
+    assert.equal(await page.locator(".ow").evaluate(node => node.inert), false);
+    assert.equal(await page.getByRole("button", {name: "Draft repairs with AI", exact: true}).isEnabled(), true);
   } finally { await browser.close(); }
 });
