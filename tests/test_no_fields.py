@@ -33,3 +33,13 @@ def test_review_routes_do_not_require_server_state():
     client = app.test_client()
     assert client.get('/review/11223344-5566-7788-9900-aabbccddeeff').status_code == 200
     assert client.get('/review/not-a-review-id').status_code == 404
+
+
+def test_ai_review_does_not_treat_missing_controls_as_a_defect():
+    from unittest.mock import patch
+    from workshop.pdf_accessibility import review_pdf_accessibility_with_ai
+    with patch("workshop.workshop_ai.chat_completion", return_value={"findings": []}) as complete:
+        review_pdf_accessibility_with_ai({"fields": []})
+    instructions = complete.call_args.kwargs["messages"][0]["content"]
+    assert "Interactive form fields are optional" in instructions
+    assert "never report zero fields as a defect" in instructions
