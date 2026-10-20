@@ -108,6 +108,7 @@ test("DOCX heading roles from text selection, persistence and undo", async () =>
     await page.getByRole("button", {name: "Open workshop"}).click();
     await page.locator(".ow").waitFor({state: "visible"});
     await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    await page.getByRole("link", {name: "Heading levels", exact: true}).click();
     await page.locator("[data-paragraph-id]").nth(1).evaluate(p => {
       const range = document.createRange();
       range.setStart(p.firstChild, 2);
@@ -192,3 +193,53 @@ test("DOCX image alternatives and table names are discoverable and persist", asy
 async function idleAfterRestore(page) {
   await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
 }
+
+test("DOCX native preview selects blocks and merges adjacent paragraphs with undo", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(base);
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "semantic-example.docx"));
+    await page.getByRole("button", {name: "Open workshop"}).click();
+    await page.locator(".ow").waitFor({state: "visible"});
+    await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    const blocks = page.locator(".ow-document-sheet > .ow-native-block");
+    const count = await blocks.count();
+    await blocks.nth(0).locator(".ow-block-handle").first().click();
+    assert.equal(await page.locator("#ow-action").inputValue(), "set_paragraph_role");
+    await blocks.nth(1).locator(".ow-block-handle").first().click({modifiers: ["Control"]});
+    await page.getByRole("button", {name: "Merge adjacent blocks", exact: true}).click();
+    await idleAfterRestore(page);
+    assert.equal(await blocks.count(), count - 1);
+    assert.match(await blocks.first().innerText(), /Accessible workshop example\nKeep this text unchanged/);
+    await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
+    await page.reload(); await page.locator(".ow").waitFor({state: "visible"}); await idleAfterRestore(page);
+    assert.equal(await blocks.count(), count - 1);
+    await page.getByRole("button", {name: "Undo last repair"}).click(); await idleAfterRestore(page);
+    assert.equal(await blocks.count(), count);
+  } finally { await browser.close(); }
+});
+
+test("Gotenberg PDF preview markers select native DOCX objects", {skip: !process.env.WORKSHOP_GOTENBERG_TEST}, async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const errors = []; page.on("pageerror", error => errors.push(error.message));
+    await page.goto(base);
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "semantic-example.docx"));
+    await page.getByRole("button", {name: "Open workshop"}).click();
+    await page.locator(".ow").waitFor({state: "visible"});
+    await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    await page.getByRole("button", {name: "Generate PDF layout preview", exact: true}).click();
+    await page.locator(".ow-pdf-marker").first().waitFor({state: "visible", timeout: 120000});
+    const id = await page.locator(".ow-pdf-marker").first().getAttribute("data-block-id");
+    await page.locator(".ow-pdf-marker").first().click();
+    assert.equal(await page.locator("#ow-object").inputValue(), id);
+    await page.locator("#ow-object-role").selectOption("heading1");
+    await page.getByRole("button", {name: "Apply approved repair"}).click();
+    await idleAfterRestore(page);
+    assert.equal(await page.locator(".ow-pdf-marker").count(), 0);
+    assert.ok(await page.getByRole("button", {name: "Generate PDF layout preview", exact: true}).isVisible());
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});

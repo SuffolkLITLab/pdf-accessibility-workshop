@@ -169,6 +169,9 @@ class OfficeEngine:
             }
         )
         report["objects"] = list(self.objects.values())
+        if pkg.format == "docx":
+            from .preview import blocks
+            report["blocks"] = blocks(pkg, report["objects"])
         report["summary"] = summary(report["findings"])
         report["summary"]["checks_unavailable"] += sum(
             c["outcome"] in {"not_run", "unsupported", "error"}
@@ -297,7 +300,7 @@ class OfficeEngine:
                         label,
                         target,
                         text(el),
-                        ["set_paragraph_role", "set_text_language"],
+                        ["set_paragraph_role", "set_text_language", "merge_paragraphs"],
                         role=paragraph_role(el, pkg.xml("word/styles.xml")),
                         style=style,
                     )

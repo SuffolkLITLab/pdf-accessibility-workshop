@@ -1,3 +1,4 @@
+import {nativePreview, pdfPreview} from "./office_preview.js";
 /* Native Office review. File bytes and decisions live in browser IndexedDB. */
 const roles = {body: "Body text", title: "Title", ...Object.fromEntries(Array.from({length: 9}, (_, i) => [`heading${i + 1}`, `Heading ${i + 1}`]))};
 const labels = {
@@ -118,6 +119,9 @@ export function createOfficeWorkshop(host) {
           Object.assign(state, state.history.pop());
           state.drafts = {};
           state.headingSelection = [];
+          state.blockSelection = [];
+          state.layoutPreview = null;
+          state.previewMode = "native";
           await refreshInspection();
           render();
         },
@@ -252,7 +256,7 @@ export function createOfficeWorkshop(host) {
     parent.append(details);
   }
   async function refreshInspection() {
-    if (state.inspection.engine_version === "office-1.1") return;
+    if (state.inspection.engine_version === "office-1.2" && (state.format !== "docx" || state.inspection.blocks)) return;
     const current = await request("inspect");
     if (current.version.sha256 !== sha()) throw new Error("Inspection returned a different document version. Your saved file is unchanged.");
     current.version = state.inspection.version;
@@ -271,6 +275,9 @@ export function createOfficeWorkshop(host) {
     state.external = [];
     state.drafts = {};
     state.headingSelection = [];
+    state.blockSelection = [];
+    state.layoutPreview = null;
+    state.previewMode = "native";
     render();
     root.querySelector("#" + focusId)?.focus();
     status.textContent = "Repair applied and rechecked. Previous review evidence is retained in history; review this new version.";
@@ -367,29 +374,94 @@ export function createOfficeWorkshop(host) {
     }
   }
   function review(parent) {
-    if (state.format === "docx") {
-      const navigation = element("nav", null, {"aria-label": "DOCX repair tools", class: "ow-tool-links"});
-      for (const [id, label] of [["ow-headings-title", "Heading levels"], ["ow-image-tools", "Image alt text"], ["ow-table-tools", "Table names"]]) {
-        const link = element("a", label, {href: "#" + id});
-        link.onclick = event => {
-          event.preventDefault();
-          const target = root.querySelector("#" + id);
-          if (target.tagName === "DETAILS") { target.open = true; target.querySelector("summary").focus(); }
-          else { target.setAttribute("tabindex", "-1"); target.focus(); }
-          target.scrollIntoView({block: "start"});
-        };
-        navigation.append(link);
-      }
-      parent.append(navigation);
+    if (state.format !== "docx") { reviewSettings(parent); return; }
+    const tools = element("nav", null, {class: "ow-tool-links", "aria-label": "DOCX repair tools"});
+    for (const [id, label] of [["ow-batch-headings", "Heading levels"], ["ow-image-tools", "Image alt text"], ["ow-table-tools", "Table names"]]) {
+      const link = element("a", label, {href: "#" + id});
+      link.onclick = event => {event.preventDefault(); const target = root.querySelector("#" + id); target.open = true; target.querySelector("summary").focus(); target.scrollIntoView({block: "start"});};
+      tools.append(link);
     }
-    headings(parent);
+    parent.append(tools, element("p", "Click a document block to edit its settings. Ctrl/Cmd-click or Shift-click selects multiple blocks; checkboxes in the settings panel also support keyboard selection."));
+    const workspace = element("div", null, {class: "ow-workspace"});
+    const viewer = element("section", null, {class: "ow-document-view", "aria-label": "Document preview"});
+    const inspector = element("section", null, {class: "ow-inspector", "aria-label": "Selected block settings"});
+    const toolbar = element("div", null, {class: "ow-preview-toolbar"});
+    const surface = element("div", null, {class: "ow-preview-content"});
+    const mark = () => {
+      const selected = state.blockSelection?.length ? state.blockSelection : [state.selected];
+      for (const node of surface.querySelectorAll("[data-block-id]")) {
+        node.classList.toggle("ow-block-selected", selected.includes(node.dataset.blockId));
+        const handle = node.matches("button") ? node : node.querySelector(".ow-block-handle");
+        handle?.setAttribute("aria-pressed", String(selected.includes(node.dataset.blockId)));
+      }
+    };
+    const choose = (id, multiple) => {
+      state.selected = id;
+      const ids = new Set(multiple ? state.blockSelection || [] : []);
+      if (multiple && ids.has(id)) ids.delete(id); else ids.add(id);
+      state.blockSelection = state.inspection.objects.filter(o => ids.has(o.id)).map(o => o.id);
+      updateInspector(); mark(); host.onStateChange();
+    };
+    const updateInspector = () => {
+      inspector.replaceChildren();
+      inspector.append(element("h3", "Block settings"));
+      const selected = state.blockSelection || [];
+      inspector.append(element("p", `${selected.length} block(s) selected.`));
+      const merge = button("Merge adjacent blocks", async () => {
+        const ids = state.blockSelection || [];
+        await applyDecisions([{object_id: ids[0], action: "merge_paragraphs", value: ids}]);
+      }, selected.length < 2 || !state.inspection.edit_policy.editable);
+      const mergePanel = element("details");
+      mergePanel.open = selected.length > 1;
+      mergePanel.append(element("summary", "Merge selected paragraphs"), merge,
+        element("p", "Combine adjacent text paragraphs into one block, with line breaks between their text and the first paragraph’s settings. Undo restores the original blocks."));
+      inspector.append(mergePanel);
+      const selection = element("details", null, {class: "ow-checkbox-selection"});
+      selection.append(element("summary", "Select adjacent paragraphs with checkboxes"));
+      for (const obj of state.inspection.objects.filter(o => o.kind === "paragraph")) {
+        const label = element("label", null, {class: "ow-select-paragraph"});
+        const check = element("input", null, {type: "checkbox", "data-select-id": obj.id});
+        check.checked = selected.includes(obj.id);
+        check.onchange = () => {choose(obj.id, true); inspector.querySelector(".ow-checkbox-selection").open = true; inspector.querySelector(`[data-select-id="${obj.id}"]`).focus();};
+        label.append(check, document.createTextNode(obj.text || "(No paragraph text)"));
+        selection.append(label);
+      }
+      inspector.append(selection);
+      reviewSettings(inspector);
+    };
+    const display = () => {
+      surface.replaceChildren();
+      if (state.previewMode === "pdf" && state.layoutPreview?.source_sha256 === sha()) {
+        surface.append(element("p", "Converted layout preview. Fonts and pagination may differ from Word. Click a marker to select its native block; use Document blocks where a marker is unavailable."));
+        pdfPreview(surface, state.layoutPreview, host.pdfjsLib, choose, error => {
+          surface.append(element("p", "PDF display unavailable. Choose Document blocks to continue.", {role: "alert"}));
+        });
+      } else {
+        surface.append(element("p", "Simulated document view: native paragraphs, images and tables; page layout is approximate."));
+        surface.append(nativePreview(state.inspection, state.blockSelection || [state.selected], choose));
+        mark();
+      }
+    };
+    toolbar.append(button("Document blocks", () => {state.previewMode = "native"; display();}),
+      button(state.layoutPreview?.source_sha256 === sha() ? "PDF layout preview" : "Generate PDF layout preview", async () => {
+        if (state.layoutPreview?.source_sha256 !== sha()) {
+          const preview = await request("preview", {expected_sha256: sha()});
+          if (preview.source_sha256 !== sha()) throw new Error("Preview is for a different document version.");
+          state.layoutPreview = {...preview, bytes: decode(preview.pdf_base64)};
+          delete state.layoutPreview.pdf_base64;
+        }
+        state.previewMode = "pdf"; toolbar.lastElementChild.textContent = "PDF layout preview"; display();
+      }));
+    viewer.append(toolbar, surface); workspace.append(viewer, inspector); parent.append(workspace);
+    updateInspector(); display();
+    const batch = element("details", null, {id: "ow-batch-headings"});
+    batch.open = state.batchOpen || false;
+    batch.ontoggle = () => {state.batchOpen = batch.open;};
+    batch.append(element("summary", "Batch heading levels and text selection"));
+    headings(batch); parent.append(batch);
     visualAndTableControls(parent);
-    parent.append(
-      element(
-        "p",
-        "This semantic view follows native document structure. It is not a rendered page or slide preview. Confirm layout, reading order, and behavior in Word or PowerPoint.",
-      ),
-    );
+  }
+  function reviewSettings(parent) {
     const select = element("select", null, { id: "ow-object" });
     parent.append(element("label", "Document object", { for: "ow-object" }));
     for (const obj of state.inspection.objects)
@@ -431,11 +503,11 @@ export function createOfficeWorkshop(host) {
       }
       parent.append(table);
     }
-    findings(parent, obj.id);
+    if (state.format !== "docx") findings(parent, obj.id);
     if (obj.operations.length && state.inspection.edit_policy.editable) {
       const form = element("form", null, { class: "ow-repair" }),
         action = element("select", null, { id: "ow-action" });
-      for (const op of obj.operations)
+      for (const op of obj.operations.filter(op => op !== "merge_paragraphs"))
         action.append(element("option", labels[op] || op, { value: op }));
       const draft = state.drafts[obj.id] || {};
       if (obj.operations.includes(draft.action)) action.value = draft.action;
@@ -521,6 +593,7 @@ export function createOfficeWorkshop(host) {
       parent.append(form);
       update();
     }
+    if (state.format === "docx") findings(parent, obj.id);
     const notes = element("textarea", null, {
       id: "ow-review-notes",
       rows: "3",

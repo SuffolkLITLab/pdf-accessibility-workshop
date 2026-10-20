@@ -169,3 +169,10 @@ def validation_result(job_id):
             "detail": "Validation worker failed; no conformance result was inferred.",
         }
     return jsonify(success=True, data={"status": "complete", "result": result})
+
+
+@api.post("preview")
+def preview():
+    from workshop.office.preview import convert
+    source, name = uploaded()
+    return jsonify(success=True, data=convert(source, name, request.form.get("expected_sha256")))

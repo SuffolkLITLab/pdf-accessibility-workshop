@@ -23,8 +23,16 @@ explicit repairs, immutable history, and file/report/manifest downloads. See
 
 ## DOCX semantic repairs
 
-In **Review and repair**, use **Heading levels**, **Image alt text**, or
-**Table names** to jump to the editing controls.
+In **Review and repair**, click a block in the simulated document view to open its
+settings beside the preview. Ctrl/Cmd-click or Shift-click adds blocks to the selection;
+the settings panel also offers keyboard-accessible checkboxes. **Merge adjacent blocks**
+combines ordinary adjacent text paragraphs into one paragraph, retaining the first
+paragraph's settings and placing a line break between their text. Lists, section
+boundaries, tracked edits, fields, drawings and referenced ranges remain separate.
+Merge supports undo and deterministic retries against the original digest.
+
+**Heading levels**, **Image alt text**, and **Table names** provide additional batch
+and inventory controls below the workspace.
 
 - Highlight text in the read-only paragraph view or select paragraphs with checkboxes,
   then apply Title, Heading 1–9, or Body text. The entire containing paragraphs change
@@ -42,6 +50,28 @@ body-text editing. Native Word/screen-reader behavior still needs reader testing
 Paragraph style/property handling uses [python-docx](https://python-docx.readthedocs.io/en/latest/user/styles-using.html)
 without resaving the entire package. Table names use the
 [Office table-caption property](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.tableproperties.tablecaption?view=openxml-3.0.1).
+
+## Gotenberg layout preview
+
+**Generate PDF layout preview** sends a preview-only copy to the configured Gotenberg
+LibreOffice service. Set `GOTENBERG_URL`, `GOTENBERG_USERNAME`, and `GOTENBERG_PASSWORD`
+as server secrets (the deployment uses the same service as LITEfile). Basic-auth values
+and original filenames are never sent to the browser. Requests disable redirects,
+bound the output to 30 MB/100 pages, use a 90-second timeout, and allow at most two
+concurrent conversions per process. Externally linked resources and external-content
+fields are not converted. No external preview runs during ordinary inspection.
+
+Temporary DOCX bookmarks link PDF named destinations to exact native object IDs;
+there is no text-matching locator. Click the PDF's paragraph/image/table markers to
+open settings. Unmapped blocks remain editable in the native view. The current
+implementation anchors main-document blocks; headers, footers and unsupported layout
+structures can be selected through the object selector. Fonts and pagination may differ
+from Word. The PDF is a layout aid, not an accessible export or PDF/UA validation.
+Edits and undo discard the old preview; a regenerated preview records its source hash.
+
+The original DOCX never receives the temporary bookmarks. Preview bytes are saved
+only with that browser's review. `GOTENBERG_*` credentials must not be committed.
+See [Gotenberg's conversion options](https://gotenberg.dev/docs/convert-with-libreoffice/convert-to-pdf).
 
 ## Saved reviews
 

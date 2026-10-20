@@ -37,7 +37,7 @@ def descendants(node, name):
 
 
 def text(node):
-    return "".join(el.text or "" for el in node.iter() if local(el) in {"t", "delText"})
+    return "".join("\n" if local(el) == "br" else "\t" if local(el) == "tab" else el.text or "" for el in node.iter() if local(el) in {"t", "delText", "br", "tab"})
 
 
 def on(value):

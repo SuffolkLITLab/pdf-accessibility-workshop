@@ -18,7 +18,7 @@ use framework-independent `workshop/office`, contracts, and services.
   language styles, false header toggles, duplicate table targets and logical names.
 - DOCX title, default/selected text language, supported DrawingML descriptions and
   decorative choices, accessible table names, confirmed simple table headers, and
-  Title/Body text/Heading 1–9 paragraph roles. Text selection applies to containing
+  Title/Body text/Heading 1–9 paragraph roles, and controlled adjacent-paragraph merging. Text selection applies to containing
   paragraphs; body-text replacement is not offered.
 - PPTX slide-list order, native/inherited title placeholders (including off-slide
   titles), shape/group inventories, descriptions/decorative choices, applicable
@@ -42,7 +42,8 @@ Neither a no-finding detector result nor a human note is a conformance certifica
 ## Deliberate limits and remaining milestones
 
 This is the first native inspection/controlled-repair release, not completion of
-all eight milestones. No Office raster renderer, conversion pipeline, Office AI,
+all eight milestones. A Gotenberg PDF layout preview is available, with native bookmark identity markers.
+It is not a validated PDF export. No Office AI,
 complex field-link editor, slide reordering, SmartArt reconstruction, caption
 editing, paragraph splitting/list restructuring, or full effective-contrast resolver is enabled.
 Unresolved contrast, layout/master semantics, complex tables and media remain

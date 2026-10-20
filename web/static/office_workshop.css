@@ -119,3 +119,31 @@
 .ow .ow-object-list > summary { cursor: pointer; font-weight: 600; }
 .ow .ow-object-card { border-bottom: 1px solid #d5dcd8; padding: 1rem 0; }
 .ow .ow-object-card .ow-preview { max-width: 200px; max-height: 160px; }
+
+.ow .ow-workspace { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); gap: 1rem; align-items: start; }
+.ow .ow-document-view { min-width: 0; background: #e2e6eb; padding: .65rem; border: 1px solid #9aa8b7; }
+.ow .ow-preview-content { max-height: 72vh; overflow: auto; }
+.ow .ow-inspector { min-width: 0; padding: 1rem; background: white; border: 1px solid #9aa8b7; max-height: 80vh; overflow: auto; }
+.ow .ow-document-sheet { background: white; color: #1b1b1b; padding: 1.3rem; font-family: Georgia, serif; line-height: 1.5; box-shadow: 0 2px 8px #0002; }
+.ow .ow-document-sheet h1, .ow .ow-document-sheet h2, .ow .ow-document-sheet h3, .ow .ow-document-sheet h4 { margin: .4rem 0; }
+.ow .ow-document-title { font-size: 1.8rem; font-weight: bold; }
+.ow .ow-native-block { position: relative; border: 2px solid transparent; padding: .4rem; cursor: pointer; }
+.ow .ow-native-block:hover { border-color: #a3b7d0; }
+.ow .ow-block-selected { border: 2px solid #1766a6; background: #eef6ff; }
+.ow .ow-native-block p { white-space: pre-wrap; margin: .25rem 0; }
+.ow .ow-native-block img { max-width: 100%; max-height: 350px; }
+.ow .ow-block-handle { font: 12px Arial, sans-serif; padding: 3px 6px; color: #12345a; background: #f2f5f9; border: 1px solid #9aa8b7; border-radius: 3px; text-transform: capitalize; }
+.ow .ow-document-sheet table { width: 100%; table-layout: fixed; }
+.ow .ow-document-sheet td { vertical-align: top; overflow-wrap: anywhere; }
+.ow .ow-select-paragraph { display: flex; align-items: flex-start; gap: .5rem; font-size: 13px; }
+.ow .ow-select-paragraph input { flex-shrink: 0; }
+.ow .ow-pdf-surface { position: relative; background: white; }
+.ow .ow-pdf-marker { position: absolute; margin: 0; width: 24px; height: 24px; padding: 0; background: #edf6ff; border: 1px solid #1766a6; color: #12345a; font-weight: bold; }
+.ow .ow-preview-pager { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.ow .ow-inspector #ow-selected-object { overflow-wrap: anywhere; font-size: 18px; line-height: 1.3; }
+.ow .ow-inspector .ow-text, .ow .ow-inspector > table { display: none; }
+.ow .ow-inspector > .ow-preview { max-height: 100px; }
+.ow .ow-inspector > h3 { font-size: 22px; }
+.ow .ow-inspector label { margin-top: .6rem; }
+.ow .ow-inspector .ow-repair { margin-top: .75rem; }
+@media (max-width: 1050px) { .ow .ow-workspace { grid-template-columns: 1fr; } .ow .ow-inspector { max-height: none; } }

@@ -42,7 +42,17 @@ def plan_repairs(source, filename, expected_sha256, decisions, idempotency_key):
                 "This operation is not supported for the selected native object."
             )
         value = decision.get("value", "")
-        if action in {"set_default_language", "set_text_language"}:
+        merge_targets = None
+        if action == "merge_paragraphs":
+            from .merge import validate_merge
+            if len(decisions) != 1 or not isinstance(value, list) or any(not isinstance(i, str) or i not in objects for i in value):
+                raise PackageError("Submit one merge with a list of selected paragraph IDs.")
+            if not value or value[0] != obj['id']:
+                raise PackageError("The merge must target its first paragraph.")
+            selected = [objects[i] for i in value]
+            validate_merge(Package(source), selected)
+            merge_targets = [o['target'] for o in selected]
+        elif action in {"set_default_language", "set_text_language"}:
             if not isinstance(value, str) or not re.fullmatch(
                 r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*", value
             ):
@@ -68,6 +78,7 @@ def plan_repairs(source, filename, expected_sha256, decisions, idempotency_key):
                 "target": obj["target"],
                 "object_id": obj["id"],
                 "label": obj["label"],
+                **({"merge_targets": merge_targets} if merge_targets else {}),
             }
         )
     body = {
@@ -320,8 +331,15 @@ def apply_repairs(source, plan):
         raise Conflict("The plan or native target changed. Request a new repair plan.")
     pkg = Package(source)
     located = [pkg.locate(op["target"]) for op in plan["operations"]]
+    merged = False
     for op, node in zip(plan["operations"], located):
-        apply_operation(pkg, op, node)
+        if op['action'] == 'merge_paragraphs':
+            from .merge import merge_nodes
+            merge_nodes([pkg.locate(target) for target in op['merge_targets']])
+            pkg.touch(op['target']['part'])
+            merged = True
+        else:
+            apply_operation(pkg, op, node)
     after = pkg.write()
     reopened = Package(after)
     # A repair may add only the specifically created metadata/style parts. All
@@ -334,7 +352,8 @@ def apply_repairs(source, plan):
     # Reapply the exact semantic operations to the reopened package. A supported
     # assignment must now be a no-op at the member payload level.
     for op in plan["operations"]:
-        apply_operation(reopened, op, reopened.locate(op["target"], validate=False))
+        if op["action"] != "merge_paragraphs":
+            apply_operation(reopened, op, reopened.locate(op["target"], validate=False))
     reapplied = Package(reopened.write())
     if reapplied.members != Package(after).members:
         raise PackageError("Repair postcondition or idempotence verification failed.")
@@ -352,7 +371,8 @@ def apply_repairs(source, plan):
         "changed_parts": sorted(pkg.changed),
         "verification": {
             "native_reopen": "pass",
-            "operation_idempotence": "pass",
+            "operation_idempotence": "not_applicable" if merged else "pass",
+            "merge_content_preservation": "pass" if merged else "not_applicable",
             "unchanged_member_payloads": "pass",
             "unchanged_members": len(unchanged),
             "rendered_comparison": "not_run",
