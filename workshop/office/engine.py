@@ -609,6 +609,8 @@ class OfficeEngine:
                         for n in table.iter()
                     )
                 )
+                if table is not None and nv is not None:
+                    operations.extend(["set_table_title", "set_alt_text"])
                 if table is not None and not complex_table:
                     operations.append("set_table_header")
                 obj = self.add_object(
@@ -618,7 +620,8 @@ class OfficeEngine:
                     content,
                     operations,
                     slide=number,
-                    value=alt if visual else content,
+                    value=alt if visual or tables else content,
+                    table_title=nv.get("title", "") if tables and nv is not None else None,
                     decorative=decorative,
                     preview=self.image_preview(part, el),
                     shape_id=shape_id,

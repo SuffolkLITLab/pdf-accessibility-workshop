@@ -24,7 +24,8 @@ use framework-independent `workshop/office`, contracts, and services.
   titles), shape/group inventories, descriptions/decorative choices, applicable
   language/font defaults, table/link/media inventories, and explicit complex-content
   coverage. Edits support metadata, existing simple title placeholders, descriptions,
-  decorative choices, language, and simple-table first-row formatting.
+  decorative choices, language, table names/descriptions, and simple-table first-row formatting.
+  A slide-by-slide object view exposes these manual repairs alongside approved AI drafts.
 - Three-stage Office UI, semantic views, contextual objects, explicit human notes,
   external-test records, native file export, readable report, portable JSON manifest.
   Existing PDF review snapshots use tagged JSON for Sets, Maps and dates in manifests.
@@ -43,7 +44,7 @@ Neither a no-finding detector result nor a human note is a conformance certifica
 
 This is the first native inspection/controlled-repair release, not completion of
 all eight milestones. A Gotenberg PDF layout preview is available, with native bookmark identity markers.
-It is not a validated PDF export. Explicit, author-approved DOCX AI repair drafts are available. No
+It is not a validated PDF export. Explicit, author-approved DOCX/PPTX AI repair drafts are available. No
 complex field-link editor, slide reordering, SmartArt reconstruction, caption
 editing, paragraph splitting/list restructuring, or full effective-contrast resolver is enabled.
 Unresolved contrast, layout/master semantics, complex tables and media remain

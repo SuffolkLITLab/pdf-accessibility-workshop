@@ -245,7 +245,8 @@ test("Gotenberg PDF preview markers select native DOCX objects", {skip: !process
   } finally { await browser.close(); }
 });
 
-test("DOCX AI drafts require approval, persist, and use undoable repairs", async () => {
+for (const format of ["docx", "pptx"])
+ test(`${format.toUpperCase()} AI drafts require approval, persist, and use undoable repairs`, async () => {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
@@ -273,7 +274,7 @@ test("DOCX AI drafts require approval, persist, and use undoable repairs", async
       }}});
     });
     await page.goto(base);
-    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "office-example.docx"));
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, `office-example.${format}`));
     await page.getByRole("button", {name: "Open workshop"}).click();
     await page.locator(".ow").waitFor({state: "visible"});
     assert.equal(calls, 0);
@@ -317,5 +318,52 @@ test("DOCX AI drafts require approval, persist, and use undoable repairs", async
     assert.equal(await progress.count(), 0);
     assert.equal(await page.locator(".ow").evaluate(node => node.inert), false);
     assert.equal(await page.getByRole("button", {name: "Draft repairs with AI", exact: true}).isEnabled(), true);
+  } finally { await browser.close(); }
+});
+
+test("PPTX slide objects expose manual title, image and table repairs", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(base);
+    await page.locator("#pdf-file").setInputFiles(path.join(__dirname, "presentation-example.pptx"));
+    await page.getByRole("button", {name: "Open workshop"}).click();
+    await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+    const choose = async name => {
+      await page.locator(".ow-slide-list").getByRole("button", {name}).click();
+    };
+    const apply = async () => {
+      await page.getByRole("button", {name: "Apply approved repair", exact: true}).click();
+      await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    };
+    await choose(/^Title:/);
+    await page.locator("#ow-action").selectOption("set_existing_title");
+    await page.locator("#ow-value").fill("Accessible workshop overview");
+    await apply();
+    assert.match(await page.locator(".ow-slide-list").innerText(), /Accessible workshop overview/);
+    await choose(/^Image:/);
+    await page.locator("#ow-action").selectOption("set_alt_text");
+    await page.locator("#ow-value").fill("Blue rectangle legend key");
+    await apply();
+    assert.equal(await page.locator("#ow-value").inputValue(), "Blue rectangle legend key");
+    await page.locator("#ow-action").selectOption("mark_decorative");
+    await apply();
+    await choose(/^Table:/);
+    await page.locator("#ow-action").selectOption("set_table_title");
+    await page.locator("#ow-value").fill("Review responsibilities");
+    await apply();
+    await page.locator("#ow-action").selectOption("set_table_title");
+    assert.equal(await page.locator("#ow-value").inputValue(), "Review responsibilities");
+    await page.locator("#ow-action").selectOption("set_table_header");
+    await page.locator("#ow-table-confirm").check();
+    await apply();
+    await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
+    await page.reload();
+    await page.locator(".ow-slide-list").waitFor();
+    assert.match(await page.locator(".ow-slide-list").innerText(), /Accessible workshop overview/);
+    await page.getByRole("button", {name: "Undo last repair"}).click();
+    await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+    await page.locator("#ow-action").selectOption("set_table_title");
+    assert.equal(await page.locator("#ow-value").inputValue(), "Review responsibilities");
   } finally { await browser.close(); }
 });

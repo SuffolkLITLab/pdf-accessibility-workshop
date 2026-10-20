@@ -254,7 +254,7 @@ export function createOfficeWorkshop(host) {
     parent.append(details);
   }
   async function refreshInspection() {
-    if (state.inspection.engine_version === "office-1.2" && (state.format !== "docx" || state.inspection.blocks)) return;
+    if (state.inspection.engine_version === "office-1.3" && (state.format !== "docx" || state.inspection.blocks)) return;
     const current = await request("inspect");
     if (current.version.sha256 !== sha()) throw new Error("Inspection returned a different document version. Your saved file is unchanged.");
     current.version = state.inspection.version;
@@ -373,7 +373,7 @@ export function createOfficeWorkshop(host) {
     }
   }
   function aiDraftControls(parent) {
-    if (state.format !== "docx") return;
+    if (!["docx", "pptx"].includes(state.format)) return;
     const section = element("section", null, {class: "ow-ai-drafts", "aria-label": "AI repair drafts"});
     const draftButton = button("Draft repairs with AI", async () => {
       draftButton.disabled = true;
@@ -471,7 +471,7 @@ export function createOfficeWorkshop(host) {
     parent.append(section);
   }
   function review(parent) {
-    if (state.format !== "docx") { reviewSettings(parent); return; }
+    if (state.format === "pptx") { reviewPresentation(parent); return; }
     const tools = element("nav", null, {class: "ow-tool-links", "aria-label": "DOCX repair tools"});
     for (const [id, label] of [["ow-batch-headings", "Heading levels"], ["ow-image-tools", "Image alt text"], ["ow-table-tools", "Table names"]]) {
       const link = element("a", label, {href: "#" + id});
@@ -559,6 +559,39 @@ export function createOfficeWorkshop(host) {
     headings(batch); parent.append(batch);
     visualAndTableControls(parent);
   }
+  function reviewPresentation(parent) {
+    aiDraftControls(parent);
+    const workspace = element("div", null, {class: "ow-workspace"});
+    const viewer = element("section", null, {class: "ow-document-view", "aria-label": "Presentation objects"});
+    viewer.append(element("p", "Select an object to edit · Text and structure view, not slide layout"));
+    const sheet = element("div", null, {class: "ow-document-sheet ow-slide-list"});
+    const slides = new Map();
+    for (const obj of state.inspection.objects) {
+      const slide = obj.slide || 0;
+      if (!slides.has(slide)) {
+        const section = element("section");
+        section.append(element("h3", slide ? `Slide ${slide}` : "Presentation settings"));
+        slides.set(slide, section); sheet.append(section);
+      }
+      const row = element("section", null, {class: "ow-slide-object" + (obj.id === state.selected ? " ow-block-selected" : ""), "data-block-id": obj.id});
+      const select = button(obj.kind === "metadata" ? "Document title" : obj.kind === "language" ? "Default language" : `${obj.kind[0].toUpperCase() + obj.kind.slice(1)}: ${obj.text?.slice(0, 100) || obj.table_title || obj.label}`, () => {
+        state.selected = obj.id; render(); root.querySelector("#ow-selected-object")?.focus();
+      });
+      select.setAttribute("aria-pressed", String(obj.id === state.selected));
+      row.append(select);
+      if (obj.preview && obj.kind === "image") row.append(element("img", null, {src: obj.preview, alt: obj.decorative ? "" : obj.value || "Image awaiting description", class: "ow-preview"}));
+      if (obj.rows) {
+        const table = element("table");
+        for (const cells of obj.rows) {const tr = element("tr"); for (const cell of cells) tr.append(element("td", cell)); table.append(tr);}
+        row.append(table);
+      } else if (obj.text && obj.kind !== "image") row.append(element("p", obj.text));
+      slides.get(slide).append(row);
+    }
+    viewer.append(sheet);
+    const inspector = element("section", null, {class: "ow-inspector", "aria-label": "Selected presentation object settings"});
+    reviewSettings(inspector);
+    workspace.append(viewer, inspector); parent.append(workspace);
+  }
   function reviewSettings(parent) {
     const select = element("select", null, { id: "ow-object" });
     const picker = element("details");
@@ -610,12 +643,16 @@ export function createOfficeWorkshop(host) {
         action.append(element("option", labels[op] || op, { value: op }));
       const draft = state.drafts[obj.id] || {};
       if (obj.operations.includes(draft.action)) action.value = draft.action;
+      else if (obj.kind === "table" && obj.operations.includes("set_table_title")) action.value = "set_table_title";
       const value = element("textarea", null, {
         id: "ow-value",
         rows: "4",
         maxlength: "4000",
       });
-      value.value = draft.value ?? obj.table_title ?? obj.value ?? obj.alt ?? obj.text ?? "";
+      const currentValue = () => action.value.includes("language")
+        ? (obj.kind === "language" ? obj.value : obj.languages?.length === 1 ? obj.languages[0] : "")
+        : action.value === "set_table_title" ? obj.table_title : obj.value ?? obj.alt ?? obj.text;
+      value.value = draft.value ?? currentValue() ?? "";
       const valueLabel = element("label", "Approved value or description", {
         for: "ow-value",
       });
@@ -640,7 +677,7 @@ export function createOfficeWorkshop(host) {
         value.hidden = valueLabel.hidden = flag || action.value === "set_paragraph_role";
         role.hidden = roleLabel.hidden = action.value !== "set_paragraph_role";
         check.hidden = checkLabel.hidden = action.value !== "set_table_header";
-        valueLabel.textContent = action.value === "set_table_title" ? "Table name (accessible title)" : action.value === "set_alt_text" ? "Alternative text" : "Approved value or description";
+        valueLabel.textContent = action.value.includes("language") ? "Language tag" : action.value === "set_table_title" ? "Table name (accessible title)" : action.value === "set_alt_text" ? "Alternative text" : "Approved value or description";
         hint.textContent = action.value === "set_table_title"
           ? "Names the table without inserting a visible caption."
           : action.value === "set_alt_text"
@@ -655,7 +692,7 @@ export function createOfficeWorkshop(host) {
         state.drafts[obj.id] = { action: action.value, value: action.value === "set_paragraph_role" ? role.value : value.value };
         host.onStateChange();
       };
-      action.onchange = update;
+      action.onchange = () => { value.value = currentValue() ?? ""; update(); };
       value.oninput = update;
       role.onchange = update;
       form.append(

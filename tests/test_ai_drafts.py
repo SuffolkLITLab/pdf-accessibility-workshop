@@ -160,3 +160,54 @@ def test_startup_drops_privileges_after_initializing_counter_volume(
         "execvp",
     ]
     assert calls[-1][1] == ("gunicorn", ["gunicorn", "web.app:app"])
+
+
+def test_pptx_ai_proposals_and_native_preservation(monkeypatch):
+    from workshop.office.repairs import plan_repairs, apply_repairs
+    from workshop.office.package import Package
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-only")
+    source = Path("tests/presentation-example.pptx").read_bytes()
+    objects = OfficeEngine().inspect(source, "Workshop.pptx")["objects"]
+    by_kind = {o["kind"]: o for o in objects}
+    suggestions = [
+        {
+            "object_id": by_kind[kind]["id"],
+            "action": action,
+            "value": value,
+            "reason": "Review this proposed semantic repair.",
+        }
+        for kind, action, value in [
+            ("metadata", "set_title", "Accessibility workshop"),
+            ("title", "set_existing_title", "Accessibility review overview"),
+            ("table", "set_table_title", "Review responsibilities"),
+            ("image", "set_alt_text", "Blue rectangle used as a legend key"),
+            ("shape", "set_paragraph_role", "heading1"),
+        ]
+    ]
+    with patch(
+        "workshop.office.ai_drafts.chat_completion",
+        return_value=json.dumps({"suggestions": suggestions, "review_notes": []}),
+    ) as provider:
+        result = draft_repairs(source, "Workshop.pptx", digest(source))
+    assert len(result["suggestions"]) == 4 and result["excluded_proposals"] == 1
+    assert result["images_considered"] == 1
+    assert '"slide": 1' in str(provider.call_args.kwargs["messages"])
+    plan = plan_repairs(
+        source,
+        "Workshop.pptx",
+        digest(source),
+        result["suggestions"],
+        "pptx-ai-repairs",
+    )
+    output, report, _ = apply_repairs(source, plan)
+    after = {o["kind"]: o for o in report["objects"]}
+    assert after["title"]["text"] == "Accessibility review overview"
+    assert after["table"]["table_title"] == "Review responsibilities"
+    assert after["image"]["value"] == "Blue rectangle used as a legend key"
+    assert after["shape"]["text"] == by_kind["shape"]["text"]
+    original, repaired = Package(source), Package(output)
+    for name, payload in original.members.items():
+        if name not in {"docProps/core.xml", "ppt/slides/slide1.xml"}:
+            assert repaired.members[name] == payload, name
+    assert Path("tests/presentation-example.pptx").read_bytes() == source

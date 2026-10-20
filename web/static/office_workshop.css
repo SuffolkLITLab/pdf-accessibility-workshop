@@ -177,3 +177,9 @@
 .ow-ai-spinner { display: block; width: 36px; height: 36px; border: 4px solid #dbe4ec; border-top-color: #002e5d; border-radius: 50%; animation: ow-ai-spin 1s linear infinite; }
 @keyframes ow-ai-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .ow-ai-spinner { animation: none; } }
+.ow .ow-slide-list { font-family: inherit; max-height: 72vh; overflow: auto; }
+.ow .ow-slide-list > section { margin-bottom: 2rem; }
+.ow .ow-slide-object { padding: .5rem .75rem; border-left: 2px solid transparent; }
+.ow .ow-slide-object.ow-block-selected { border: 0; border-left: 2px solid #1766a6; background: #f3f7fb; }
+.ow .ow-slide-object > button { text-align: left; background: transparent; border: 0; color: #002e5d; text-decoration: underline; padding: .3rem 0; }
+.ow .ow-slide-object p { white-space: pre-wrap; }

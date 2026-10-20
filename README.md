@@ -164,9 +164,9 @@ Schibsted Grotesk, IBM Plex Mono, and workshop styles.
 
 ## AI drafts and usage allowances
 
-For DOCX, **Draft repairs with AI** sends a bounded native inventory and up to
+For DOCX and PPTX, **Draft repairs with AI** sends a bounded native inventory and up to
 four image previews to OpenAI on an explicit click. Suggestions cover metadata,
-heading roles, language, table names and image alternatives. Each is validated
+DOCX heading roles, existing PPTX slide titles, table names, language and image alternatives. Each is validated
 against the native repair API, bound to the current document digest, and unchecked
 until approved. Applying selected suggestions creates an undoable version; drafts
 and selections survive browser reloads. Text rewriting is outside this feature.
@@ -175,7 +175,7 @@ The deployed app limits document API requests to 60 per client per minute. Actua
 AI provider attempts share allowances of 6 per client per hour, 12 per client per
 day, and 40 across the application per UTC day. Failed attempts count; provider
 retries are disabled. Each request allows at most 100 KB of text, four inline
-images totaling 4 MB, and 8,192 completion tokens (DOCX drafts use 6,000).
+images totaling 4 MB, and 8,192 completion tokens (Office drafts use 6,000).
 These are usage bounds, not an exact dollar budget.
 
 Configure `API_REQUESTS_PER_MINUTE`, `AI_CALLS_PER_CLIENT_HOUR`,
@@ -187,3 +187,11 @@ day. IPv6 clients share a /64 allowance; users behind one network may share limi
 If tracking fails, AI pauses while manual editing remains available. The server
 initializes volume permissions and drops privileges before starting Gunicorn.
 This deployment uses one machine; additional machines need a shared counter store.
+
+PPTX review offers a slide-by-slide text/structure view with selectable objects
+and the same repair, undo, and reload workflow. This is not a rendered slide
+preview. Table names use the native nonvisual drawing
+[title property](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.presentation.nonvisualdrawingproperties.title?view=openxml-3.0.1);
+descriptions use `descr`. Complex tables, slide reordering, missing title
+placeholder creation, and unsupported graphics remain review tasks. Actual
+PowerPoint/screen-reader validation is still required for native-reader behavior.

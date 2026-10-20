@@ -253,6 +253,11 @@ def apply_operation(pkg, op, node):
             decorative(nv, True)
         else:
             decorative(nv, False)
+    elif action == "set_table_title" and pkg.format == "pptx":
+        nv = alt_node(pkg, node)
+        if nv is None:
+            raise PackageError("This table has no supported nonvisual properties.")
+        nv.set("title", value)
     elif action == "set_table_title":
         props = ensure(node, q("w", "tblPr"), first=True)
         caption = props.find(q("w", "tblCaption"))
