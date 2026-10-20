@@ -53,3 +53,24 @@
 .lit-content #saved-reviews a { flex: 1; overflow-wrap: anywhere; }
 .lit-content #saved-reviews button { font-size: 14px; padding: 6px 12px; }
 .aw #save-status { font-size: 12px; max-width: 160px; color: var(--aw-muted); }
+
+/* Shared Lab identity around the original review controls. */
+.aw { --lit-navy: #15284b; --lit-gold: #bc912c; }
+.aw .aw-topbar { flex-wrap: wrap; flex-shrink: 0; border-top: 4px solid var(--lit-gold); }
+.aw .aw-lab-logo { display: flex; align-items: center; flex: 0 0 135px; padding: 6px 12px 6px 0; border-right: 1px solid var(--aw-line); }
+.aw .aw-lab-logo img { width: 123px; height: auto; }
+.aw .lit-footer { flex-shrink: 0; max-height: 22vh; overflow-y: auto; font-family: "Albert Sans", Arial, sans-serif; }
+.aw .lit-footer-inner { max-width: none; padding: 10px 20px; gap: 24px; font-size: 12px; }
+.aw .lit-footer-logo { flex: 0 0 130px; }
+.aw .lit-footer-logo img { width: 130px; }
+.aw .lit-footer p { margin: 0 0 3px; }
+.aw .lit-footer a { color: white; text-decoration: underline; text-underline-offset: .18em; }
+.aw .lit-footer :focus-visible { outline: 3px solid #fdb924; outline-offset: 3px; }
+.aw .aw-lab-logo:focus-visible { outline: 3px solid #15284b; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .aw .lit-footer-inner { flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px; }
+  .aw .lit-footer-logo { flex-basis: 90px; }
+  .aw .lit-footer nav { gap: 4px 12px; }
+  .aw .aw-lab-logo { flex-basis: 105px; }
+  .aw .aw-lab-logo img { width: 95px; }
+}

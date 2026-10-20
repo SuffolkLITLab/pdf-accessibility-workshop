@@ -118,13 +118,20 @@ export function createOfficeWorkshop(host) {
         },
         !state.history.length,
       ),
-      button("Choose document", () => {
+      button("Workshop home", () => {
         root.hidden = true;
         document.getElementById("app").inert = false;
         host.onClose();
       }),
     );
-    header.append(brand, actions);
+    const home = element("a", null, {
+      class: "aw-lab-logo", href: "/",
+      "aria-label": "Accessibility workshop landing page",
+    });
+    home.append(element("img", null, {
+      src: "/static/brand/lit-lab-logo-large.svg", alt: "Suffolk LIT Lab",
+    }));
+    header.append(home, brand, actions);
     root.append(header);
     const body = element("div", null, { class: "aw-body" }),
       nav = element("nav", null, {
@@ -145,6 +152,8 @@ export function createOfficeWorkshop(host) {
     );
     body.append(nav, main);
     root.append(body);
+    const footer = document.getElementById("workshop-footer");
+    if (footer) root.append(footer.content.cloneNode(true));
     main.append(
       element(
         "h2",

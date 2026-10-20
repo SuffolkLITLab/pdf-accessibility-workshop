@@ -27,15 +27,10 @@
 <button type="submit">Open workshop →</button></form>
 <p id="privacy">Documents are processed temporarily on the server. AI drafts send relevant content to OpenAI only when you request them. Reviews are saved in this browser, including the document and your decisions. You can resume them here after reloading. Clear a saved review to remove it from this browser.</p>
 </main>
-<footer class="lit-footer">
-<div class="lit-footer-inner">
-<a href="https://suffolklitlab.org/" class="lit-footer-logo"><img src="/static/brand/lit-lab-logo-large-white.svg" alt="Suffolk University Law School Legal Innovation &amp; Technology Lab"></a>
-<div><p>A tool from the <a href="https://suffolklitlab.org/">Suffolk LIT Lab</a>.</p>
-<p>Using technology and design to improve access to justice.</p>
-<nav aria-label="Footer"><a href="https://github.com/SuffolkLITLab/pdf-accessibility-workshop">Source code</a><a href="https://suffolklitlab.org/contact/">Contact the Lab</a><a href="https://suffolklitlab.org/terms/">Terms &amp; privacy</a></nav></div>
-</div></footer></div><div id="notice" role="alert" hidden><span></span><button type="button" aria-label="Dismiss message">×</button></div>
+{% include '_lit_footer.html' %}</div><div id="notice" role="alert" hidden><span></span><button type="button" aria-label="Dismiss message">×</button></div>
     <div id="a11y-workshop" class="aw" role="dialog" aria-modal="true" aria-labelledby="aw-product-name" hidden>
         <header class="aw-topbar">
+            <a class="aw-lab-logo" href="/" aria-label="Accessibility workshop landing page"><img src="/static/brand/lit-lab-logo-large.svg" alt="Suffolk LIT Lab"></a>
             <div class="aw-brand">
                 <h1 id="aw-product-name" class="aw-product">PDF accessibility workshop</h1>
                 <p class="aw-file"><span class="aw-mono" data-aw-ref="filename"></span><span class="aw-muted" data-aw-ref="file-meta"></span></p>
@@ -47,17 +42,19 @@
                     <summary class="aw-btn aw-btn-secondary aw-btn-small">History</summary>
                     <div class="aw-menu-panel" data-aw-ref="history"></div>
                 </details>
-                <button type="button" class="aw-btn aw-btn-quiet aw-btn-small" data-aw="close">&#8592; Choose PDF</button>
+                <button type="button" class="aw-btn aw-btn-quiet aw-btn-small" data-aw="close">&#8592; Workshop home</button>
             </div>
         </header>
         <div class="aw-body">
             <div class="aw-rail" data-aw-ref="rail"></div>
             <div class="aw-main" data-aw-ref="main"></div>
         </div>
+        {% include '_lit_footer.html' %}
         <div class="aw-busy" data-aw-ref="busy" hidden>
             <div class="aw-busy-card"><span class="aw-spinner" aria-hidden="true"></span><span data-aw-ref="busy-text"></span></div>
         </div>
         <div class="aw-sr" role="status" aria-live="polite" data-aw-ref="status"></div>
     </div>
+<template id="workshop-footer">{% include '_lit_footer.html' %}</template>
 <script id="workshop-config" type="application/json">{{ config | tojson }}</script>
 <script type="module" src="/static/app.js"></script></body></html>
