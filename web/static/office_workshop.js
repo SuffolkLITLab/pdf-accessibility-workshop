@@ -575,7 +575,9 @@ export function createOfficeWorkshop(host) {
       }
       const row = element("section", null, {class: "ow-slide-object" + (obj.id === state.selected ? " ow-block-selected" : ""), "data-block-id": obj.id});
       const select = button(obj.kind === "metadata" ? "Document title" : obj.kind === "language" ? "Default language" : `${obj.kind[0].toUpperCase() + obj.kind.slice(1)}: ${obj.text?.slice(0, 100) || obj.table_title || obj.label}`, () => {
-        state.selected = obj.id; render(); root.querySelector("#ow-selected-object")?.focus();
+        state.selected = obj.id; render();
+        root.querySelector(`.ow-slide-list [data-block-id="${obj.id}"]`)?.scrollIntoView({block: "nearest"});
+        root.querySelector("#ow-selected-object")?.focus({preventScroll: true});
       });
       select.setAttribute("aria-pressed", String(obj.id === state.selected));
       row.append(select);
@@ -635,7 +637,6 @@ export function createOfficeWorkshop(host) {
       }
       parent.append(table);
     }
-    if (state.format !== "docx") findings(parent, obj.id);
     if (obj.operations.length && state.inspection.edit_policy.editable) {
       const form = element("form", null, { class: "ow-repair" }),
         action = element("select", null, { id: "ow-action" });
@@ -730,6 +731,11 @@ export function createOfficeWorkshop(host) {
       update();
     }
     if (state.format === "docx") findings(parent, obj.id);
+    else {
+      const checks = element("details");
+      checks.append(element("summary", "Checks and review"));
+      findings(checks, obj.id); parent.append(checks);
+    }
     const notes = element("textarea", null, {
       id: "ow-review-notes",
       rows: "3",
