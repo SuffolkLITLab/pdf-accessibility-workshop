@@ -1,9 +1,11 @@
-import {nativePreview, pdfPreview} from "./office_preview.js";
+import {nativePreview, pdfPreview, styleTextPreview} from "./office_preview.js";
 /* Native Office review. File bytes and decisions live in browser IndexedDB. */
 const roles = {body: "Body text", title: "Title", ...Object.fromEntries(Array.from({length: 9}, (_, i) => [`heading${i + 1}`, `Heading ${i + 1}`]))};
 const labels = {
   set_paragraph_role: "Change heading or title level",
   set_title: "Set document title",
+  set_font_size: "Change font size",
+  set_text_color: "Change text color",
   set_default_language: "Set default language",
   set_text_language: "Set language for this text",
   set_alt_text: "Save approved description",
@@ -254,7 +256,7 @@ export function createOfficeWorkshop(host) {
     parent.append(details);
   }
   async function refreshInspection() {
-    if (state.inspection.engine_version === "office-1.3" && (state.format !== "docx" || state.inspection.blocks)) return;
+    if (state.inspection.engine_version === "office-1.4" && (state.format !== "docx" || state.inspection.blocks)) return;
     const current = await request("inspect");
     if (current.version.sha256 !== sha()) throw new Error("Inspection returned a different document version. Your saved file is unchanged.");
     current.version = state.inspection.version;
@@ -586,7 +588,7 @@ export function createOfficeWorkshop(host) {
         const table = element("table");
         for (const cells of obj.rows) {const tr = element("tr"); for (const cell of cells) tr.append(element("td", cell)); table.append(tr);}
         row.append(table);
-      } else if (obj.text && obj.kind !== "image") row.append(element("p", obj.text));
+      } else if (obj.text && obj.kind !== "image") {const text = element("p", obj.text); styleTextPreview(text, obj); row.append(text);}
       slides.get(slide).append(row);
     }
     viewer.append(sheet);
@@ -637,6 +639,15 @@ export function createOfficeWorkshop(host) {
       }
       parent.append(table);
     }
+    if (obj.formatting) {
+      const info = obj.formatting;
+      parent.append(element("p", `Text contrast: ${info.failed_runs} below minimum · ${info.unresolved_runs} unresolved.`, {class: "ow-contrast-summary"}));
+      const measurements = element("details"); measurements.append(element("summary", "Contrast measurements"));
+      measurements.append(element("p", "Minimum: 4.5:1 for ordinary text; 3:1 at 18 pt, or 14 pt bold. Font-size advice is separate."));
+      for (const sample of info.samples.slice(0, 8)) measurements.append(element("p", `${sample.text.slice(0, 50)} — ${sample.ratio == null ? "Unresolved colors/background" : `${sample.ratio.toFixed(2)}:1 (${sample.outcome.replaceAll("_", " ")}; minimum ${sample.required_ratio}:1)`}`));
+      if (info.sample_count > 8) measurements.append(element("small", `Showing 8 of ${info.sample_count} runs; the report retains the scan summary.`));
+      parent.append(measurements);
+    }
     if (obj.operations.length && state.inspection.edit_policy.editable) {
       const form = element("form", null, { class: "ow-repair" }),
         action = element("select", null, { id: "ow-action" });
@@ -654,6 +665,14 @@ export function createOfficeWorkshop(host) {
         ? (obj.kind === "language" ? obj.value : obj.languages?.length === 1 ? obj.languages[0] : "")
         : action.value === "set_table_title" ? obj.table_title : obj.value ?? obj.alt ?? obj.text;
       value.value = draft.value ?? currentValue() ?? "";
+      const fontSize = element("input", null, {id: "ow-font-size", type: "number", min: "6", max: "144", step: "0.5"});
+      fontSize.value = draft.action === "set_font_size" ? draft.value : obj.formatting?.font_sizes?.length === 1 ? obj.formatting.font_sizes[0] : "";
+      const fontLabel = element("label", "Font size (points)", {for: "ow-font-size"});
+      const colorHex = element("input", null, {id: "ow-text-color", type: "text", maxlength: "7", placeholder: "#000000", pattern: "#?[a-fA-F0-9]{6}"});
+      colorHex.value = draft.action === "set_text_color" ? draft.value : obj.formatting?.foregrounds?.length === 1 ? "#" + obj.formatting.foregrounds[0] : "";
+      const colorLabel = element("label", "Text color (RGB hex)", {for: "ow-text-color"});
+      const colorPicker = element("input", null, {type: "color", "aria-label": "Choose text color", value: /^#[a-f0-9]{6}$/i.test(colorHex.value) ? colorHex.value : "#000000"});
+      const contrastPreview = element("p", "", {class: "ow-contrast-preview", role: "status", "aria-live": "polite"});
       const valueLabel = element("label", "Approved value or description", {
         for: "ow-value",
       });
@@ -675,11 +694,20 @@ export function createOfficeWorkshop(host) {
           "mark_informative",
           "set_table_header",
         ].includes(action.value);
-        value.hidden = valueLabel.hidden = flag || action.value === "set_paragraph_role";
+        const formatting = ["set_font_size", "set_text_color"].includes(action.value);
+        fontSize.hidden = fontLabel.hidden = action.value !== "set_font_size";
+        colorHex.hidden = colorLabel.hidden = colorPicker.hidden = action.value !== "set_text_color";
+        fontSize.required = action.value === "set_font_size";
+        colorHex.required = action.value === "set_text_color";
+        fontSize.disabled = fontSize.hidden; colorHex.disabled = colorHex.hidden;
+        contrastPreview.hidden = !formatting;
+        value.hidden = valueLabel.hidden = flag || action.value === "set_paragraph_role" || formatting;
         role.hidden = roleLabel.hidden = action.value !== "set_paragraph_role";
         check.hidden = checkLabel.hidden = action.value !== "set_table_header";
         valueLabel.textContent = action.value.includes("language") ? "Language tag" : action.value === "set_table_title" ? "Table name (accessible title)" : action.value === "set_alt_text" ? "Alternative text" : "Approved value or description";
-        hint.textContent = action.value === "set_table_title"
+        hint.textContent = formatting
+          ? "Applies to all text runs in this object. Text and bold/italic formatting are retained. Check wrapping, clipping, and layout after export. Unresolved contrast still needs review."
+          : action.value === "set_table_title"
           ? "Names the table without inserting a visible caption."
           : action.value === "set_alt_text"
           ? "Describe what the image communicates."
@@ -690,17 +718,38 @@ export function createOfficeWorkshop(host) {
             : action.value.includes("language")
               ? "Use a language tag such as en-US or es. Setting a default preserves deliberate text overrides."
               : "";
-        state.drafts[obj.id] = { action: action.value, value: action.value === "set_paragraph_role" ? role.value : value.value };
+        const chosen = action.value === "set_font_size" ? fontSize.value : action.value === "set_text_color" ? colorHex.value : action.value === "set_paragraph_role" ? role.value : value.value;
+        state.drafts[obj.id] = { action: action.value, value: chosen };
+        if (formatting) {
+          const samples = obj.formatting?.samples || [];
+          const rgb = colorHex.value.replace(/^#/, "");
+          let fails = 0, unresolved = 0, measured = 0;
+          for (const sample of samples) {
+            const fg = action.value === "set_text_color" ? rgb : sample.foreground;
+            const size = action.value === "set_font_size" ? Number(fontSize.value) : sample.font_size;
+            if (!/^[a-f0-9]{6}$/i.test(fg || "") || !sample.background) {unresolved++; continue;}
+            const luminance = hex => [0, 2, 4].map(i => parseInt(hex.slice(i, i+2),16)/255).map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4).reduce((sum, v, i) => sum + v * [.2126,.7152,.0722][i], 0);
+            const values = [luminance(fg), luminance(sample.background)].sort((a,b) => a-b);
+            const required = size >= 18 || size >= 14 && sample.bold === true ? 3 : 4.5;
+            const ratio = (values[1]+.05)/(values[0]+.05);
+            if (ratio >= 3 && ratio < required && (size == null || size >= 14 && size < 18 && sample.bold == null)) {unresolved++; continue;}
+            measured++; if (ratio < required) fails++;
+          }
+          contrastPreview.textContent = `Preview: ${fails} below minimum, ${measured-fails} meet minimum, ${unresolved} unresolved (${samples.length} sampled runs). The server rechecks all text after applying.`;
+        }
         host.onStateChange();
       };
       action.onchange = () => { value.value = currentValue() ?? ""; update(); };
       value.oninput = update;
       role.onchange = update;
+      fontSize.oninput = update; colorHex.oninput = () => {if (/^#?[a-f0-9]{6}$/i.test(colorHex.value)) colorPicker.value = "#" + colorHex.value.replace(/^#/, ""); update();};
+      colorPicker.oninput = () => {colorHex.value = colorPicker.value; update();};
       form.append(
         element("label", "Supported repair", { for: "ow-action" }),
         action,
         valueLabel,
         value,
+        fontLabel, fontSize, colorLabel, colorHex, colorPicker, contrastPreview,
         roleLabel,
         role,
         check,
@@ -722,7 +771,7 @@ export function createOfficeWorkshop(host) {
           const decision = {
             object_id: obj.id,
             action: action.value,
-            value: action.value === "set_table_header" ? true : action.value === "set_paragraph_role" ? role.value : value.value,
+            value: action.value === "set_table_header" ? true : action.value === "set_paragraph_role" ? role.value : action.value === "set_font_size" ? fontSize.value : action.value === "set_text_color" ? colorHex.value : value.value,
           };
           await applyDecisions([decision]);
         });

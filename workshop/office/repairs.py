@@ -43,7 +43,15 @@ def plan_repairs(source, filename, expected_sha256, decisions, idempotency_key):
             )
         value = decision.get("value", "")
         merge_targets = None
-        if action == "merge_paragraphs":
+        if action == "set_font_size":
+            try: size = float(value)
+            except (TypeError, ValueError): raise PackageError("Choose a font size from 6 to 144 pt in half-point increments.")
+            if isinstance(value, bool) or not 6 <= size <= 144 or size * 2 != round(size * 2):
+                raise PackageError("Choose a font size from 6 to 144 pt in half-point increments.")
+        elif action == "set_text_color":
+            if not isinstance(value, str) or not re.fullmatch(r"#?[A-Fa-f0-9]{6}", value):
+                raise PackageError("Enter a six-digit RGB color, such as #000000.")
+        elif action == "merge_paragraphs":
             from .merge import validate_merge
             if len(decisions) != 1 or not isinstance(value, list) or any(not isinstance(i, str) or i not in objects for i in value):
                 raise PackageError("Submit one merge with a list of selected paragraph IDs.")
@@ -227,7 +235,10 @@ def apply_operation(pkg, op, node):
             defaults[:] = sorted(defaults, key=lambda node: order.get(node.tag, 99))
             pkg.touch(pkg.main)
         return
-    if action == "set_paragraph_role":
+    if action in {"set_font_size", "set_text_color"}:
+        from .formatting import apply_formatting
+        apply_formatting(pkg, node, action, value)
+    elif action == "set_paragraph_role":
         from .docx_headings import apply_role
         apply_role(pkg, node, value)
     elif action == "set_text_language":
@@ -365,6 +376,10 @@ def apply_repairs(source, plan):
     inspection = OfficeEngine().inspect(
         after, plan["filename"], parent_version=plan["source_version"]
     )
+    color_targets = {op["object_id"] for op in plan["operations"] if op["action"] == "set_text_color"}
+    for obj in inspection["objects"]:
+        if obj["id"] in color_targets and obj.get("formatting", {}).get("failed_runs", 0):
+            raise PackageError("This color is below the contrast minimum for some selected text. Choose a higher-contrast color; your previous version is unchanged.")
     receipt = {
         "plan_id": plan["id"],
         "idempotency_key": plan["idempotency_key"],

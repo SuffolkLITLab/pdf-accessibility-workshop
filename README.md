@@ -195,3 +195,34 @@ preview. Table names use the native nonvisual drawing
 descriptions use `descr`. Complex tables, slide reordering, missing title
 placeholder creation, and unsupported graphics remain review tasks. Actual
 PowerPoint/screen-reader validation is still required for native-reader behavior.
+
+## Text contrast and formatting repairs
+
+DOCX and PPTX now report native text contrast per paragraph/text object, with
+separate measured failures and unresolved runs. The reference thresholds are
+[WCAG 2.2 contrast minimum](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html):
+4.5:1 for ordinary text and 3:1 at 18 pt, or 14 pt bold. Ratios are compared before
+rounding. Unknown size/bold cannot establish a failure between 3:1 and 4.5:1.
+WCAG does not specify one minimum font size: DOCX 12 pt and PPTX 18 pt suggestions
+are readability advice and need author judgment.
+
+The manual controls offer text color (RGB picker/hex) and font size (6–144 pt,
+half-point increments). They affect existing text runs in the selected object,
+preserving text, template tokens, hyperlinks, and unrelated formatting/package
+parts. The preview estimates contrast; the server reinspects the new version and
+rejects a color change that still has a measured failure. Unknown backgrounds
+remain unresolved. Font-size edits can alter wrapping and clip text; native layout
+and reader checks remain necessary. Undo restores the preceding version.
+
+AI can propose these same repairs, with color proposals limited to deterministic
+black/white choices verified against all resolved runs. It cannot declare unknown
+contrast fixed, and size proposals cannot reduce a known larger run in the object.
+Every proposal remains unchecked until the author approves it.
+
+Coverage includes applicable DOCX paragraph/character styles and defaults,
+explicit/simple theme colors, solid shading, and the default white Word page;
+PPTX uses applicable text defaults, simple theme colors, solid shape and inherited
+slide backgrounds. Automatic Word colors, highlights, conditional table styles,
+floating content, unsupported color transforms, gradients, transparency,
+overlapping/grouped shapes, and unresolved backgrounds remain review tasks.
+This is native-package evidence, not a rendered-pixel or native-application audit.

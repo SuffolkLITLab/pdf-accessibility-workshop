@@ -5,7 +5,7 @@ from hashlib import sha256
 import uuid
 
 SCHEMA_VERSION = 1
-ENGINE_VERSION = "office-1.3"
+ENGINE_VERSION = "office-1.4"
 OUTCOMES = {
     "pass",
     "fail",

@@ -1,6 +1,7 @@
 """Native inventories, evidence and conservative Office editing capabilities."""
 
 from .docx_headings import paragraph_role
+from .formatting import docx_samples, pptx_context, pptx_sample, summarize
 
 import base64
 from collections import Counter
@@ -304,6 +305,7 @@ class OfficeEngine:
                         role=paragraph_role(el, pkg.xml("word/styles.xml")),
                         style=style,
                     )
+                    if text(el).strip(): self.formatting_report(obj, docx_samples(pkg, el))
                 elif kind in {"drawing", "pict", "object"}:
                     nv = next(iter(descendants(el, "docPr")), None)
                     supported = nv is not None
@@ -411,6 +413,7 @@ class OfficeEngine:
         found_codes = set()
         for finding in raw:
             found_codes.add(finding.code)
+            if finding.code == "EA544": continue  # Replaced by target-specific effective-color evidence.
             context = dict(finding.context)
             part = str(context.get("part", "Document"))
             obj = targets.get((part, context.get("element_path")))
@@ -444,10 +447,12 @@ class OfficeEngine:
                     "rule_scope": "implemented checker heuristic; no full WCAG conformance claim",
                 },
             )
+        if any(f["rule_id"] == "docx.text.contrast" and f["outcome"] == "fail" for f in self.report["findings"]): found_codes.add("EA544")
+        else: found_codes.discard("EA544")
         self.report["rule_inventory"] = [
             {
                 "source_code": code,
-                "rule_id": "docx." + name.replace("-", "."),
+                "rule_id": "docx.text.contrast" if code == "EA544" else "docx." + name.replace("-", "."),
                 "detector_result": "reported" if code in found_codes else "no_finding",
                 "detail": "No finding means this implemented detector did not report a condition; it is not proof of accessibility.",
             }
@@ -461,8 +466,8 @@ class OfficeEngine:
         self.report["coverage"].append(
             {
                 "capability": "docx-effective-formatting",
-                "outcome": "unsupported",
-                "detail": "Contrast and style heuristics cover a subset of effective formatting. Theme/background and layout-dependent cases require Word review.",
+                "outcome": "needs_review",
+                "detail": "Native style/default text colors and solid backgrounds are checked. Automatic colors, conditional table styles, highlights, floating content, and unsupported theme/effect combinations remain unresolved. Confirm layout in Word.",
             }
         )
 
@@ -689,7 +694,8 @@ class OfficeEngine:
                         obj,
                     )
                 if content.strip():
-                    self.pptx_text(obj, el, inherited, master, main, ph_type)
+                    context = pptx_context(pkg, part, el, chain, inherited, master_rel["part"] if master_rel else None)
+                    self.pptx_text(obj, el, inherited, master, main, ph_type, context)
                 for link in descendants(el, "hlinkClick"):
                     tip = link.get("tooltip", "")
                     run = link.getparent()
@@ -852,7 +858,7 @@ class OfficeEngine:
                     }
                 )
 
-    def pptx_text(self, obj, shape, inherited, master, presentation, ph_type):
+    def pptx_text(self, obj, shape, inherited, master, presentation, ph_type, context):
         def level_defaults(node, level):
             result = []
             if node is None:
@@ -864,6 +870,7 @@ class OfficeEngine:
                         result.append(props)
             return result
 
+        samples = []
         languages = []
         sizes = []
         unresolved_language = False
@@ -909,13 +916,16 @@ class OfficeEngine:
                 languages.append(lang)
             else:
                 unresolved_language = True
+            run_size = None
             if size:
                 try:
-                    sizes.append(int(size) / 100)
+                    run_size = int(size) / 100
+                    sizes.append(run_size)
                 except ValueError:
                     unresolved_size = True
             else:
                 unresolved_size = True
+            samples.append(pptx_sample(run, candidates, run_size, context))
         obj["languages"] = sorted(set(languages))
         obj["font_sizes"] = sorted(set(sizes))
         self.finding(
@@ -947,9 +957,22 @@ class OfficeEngine:
                 "text_length": len(text(shape)),
             },
         )
-        self.finding(
-            "pptx.text.contrast",
-            "needs_review",
-            "Effective backgrounds, theme transformations, transparency, and overlaps are not fully resolved. Check contrast in the rendered slide; no white background is assumed.",
-            obj,
+        self.formatting_report(obj, samples, editable=local(shape) in {"sp", "graphicFrame"} and obj["kind"] in {"shape", "title", "table"})
+
+    def formatting_report(self, obj, samples, editable=True):
+        info = summarize(samples)
+        obj["formatting"] = info
+        if samples and editable:
+            obj["operations"].extend(["set_font_size", "set_text_color"])
+        message = (
+            f"{info['failed_runs']} text run(s) fall below the applicable 4.5:1 or 3:1 contrast minimum."
+            if info["failed_runs"] else "Resolved text colors meet the applicable contrast minimum."
         )
+        if info["unresolved_runs"]:
+            message += f" {info['unresolved_runs']} run(s) have unresolved colors/backgrounds; review them in the native application."
+        if info["outcome"] == "needs_review": message = "Contrast cannot be established for all text. Review unresolved colors, backgrounds, effects, or overlaps in the native application."
+        self.finding(f"{self.pkg.format}.text.contrast", info["outcome"], message, obj,
+                     severity="error" if info["failed_runs"] else "warning", evidence=info,
+                     source_code="EA544" if self.pkg.format == "docx" and info["failed_runs"] else None)
+        if self.pkg.format == "docx" and any(size < 12 for size in info["font_sizes"]):
+            self.finding("docx.text.readability", "needs_review", "Some text is smaller than 12 pt. Consider the audience and layout; 12 pt is readability advice, not a WCAG minimum.", obj)

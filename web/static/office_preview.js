@@ -5,6 +5,14 @@ function el(tag, text, attrs = {}) {
   for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
   return node;
 }
+export function styleTextPreview(node, obj) {
+  const info = obj.formatting;
+  if (!info || !info.samples.length || info.sample_count > info.samples.length) return;
+  if (info.font_sizes.length === 1 && info.samples.every(s => s.font_size != null)) node.style.fontSize = `${info.font_sizes[0]}pt`;
+  if (info.foregrounds.length === 1 && info.samples.every(s => s.foreground)) node.style.color = "#" + info.foregrounds[0];
+  const bg = info.samples[0].background;
+  if (bg && info.samples.every(s => s.background === bg)) node.style.backgroundColor = "#" + bg;
+}
 export function nativePreview(report, selected, onSelect) {
   const byId = new Map(report.objects.map(o => [o.id, o]));
   const sheet = el("div", null, {class: "ow-document-sheet", "aria-label": "Document block preview"});
@@ -25,6 +33,7 @@ export function nativePreview(report, selected, onSelect) {
       const role = obj.role || "body";
       const heading = role.startsWith("heading") ? Math.min(6, Number(role.slice(7))) : 0;
       const content = el(heading ? `h${heading}` : "p", obj.text || "", {class: role === "title" ? "ow-document-title" : ""});
+      styleTextPreview(content, obj);
       node.append(content);
       for (const child of block.children || []) draw(child, node);
       if (!obj.text && !block.children?.length) {

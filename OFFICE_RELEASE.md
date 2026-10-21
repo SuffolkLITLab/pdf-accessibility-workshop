@@ -93,3 +93,11 @@ References: [WCAG2ICT](https://www.w3.org/TR/wcag2ict-22/),
 [veraPDF installation](https://docs.verapdf.org/install/),
 [python-pptx text](https://python-pptx.readthedocs.io/en/latest/user/text.html),
 [python-pptx tables](https://python-pptx.readthedocs.io/en/latest/api/table.html).
+
+Text formatting now includes reviewed font-size and RGB text-color repairs for
+DOCX paragraphs and PPTX text objects. Native contrast checks distinguish measured
+failures from unresolved coverage; AI uses the same constrained operations and
+verified color candidates. See README for threshold, inheritance, preview, and
+layout-preservation limits. The older DOCX EA544 heuristic is superseded in the
+workshop by object-level `docx.text.contrast` evidence while retaining EA544 as the
+source rule identity for measured failures.

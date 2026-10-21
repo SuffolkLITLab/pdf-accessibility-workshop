@@ -183,3 +183,5 @@
 .ow .ow-slide-object.ow-block-selected { border: 0; border-left: 2px solid #1766a6; background: #f3f7fb; }
 .ow .ow-slide-object > button { text-align: left; background: transparent; border: 0; color: #002e5d; text-decoration: underline; padding: .3rem 0; }
 .ow .ow-slide-object p { white-space: pre-wrap; }
+.ow #ow-font-size, .ow #ow-text-color { display: block; max-width: 12rem; padding: .6rem; border: 1px solid #64748b; border-radius: 4px; background: white; color: #152536; font: inherit; }
+.ow .ow-contrast-preview, .ow .ow-contrast-summary { font-size: .9rem; margin: .7rem 0; }

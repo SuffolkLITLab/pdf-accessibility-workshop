@@ -367,3 +367,48 @@ test("PPTX slide objects expose manual title, image and table repairs", async ()
     assert.equal(await page.locator("#ow-value").inputValue(), "Review responsibilities");
   } finally { await browser.close(); }
 });
+
+for (const format of ["docx", "pptx"])
+  test(`${format} contrast and font size repairs update evidence, preview and undo`, async () => {
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      let report;
+      await page.goto(base);
+      await page.locator("#pdf-file").setInputFiles(path.join(__dirname, `contrast-example.${format}`));
+      const inspected = page.waitForResponse(response => response.url().endsWith("/api/documents/inspect"));
+      await page.getByRole("button", {name: "Open workshop"}).click();
+      report = (await (await inspected).json()).data;
+      await page.getByRole("button", {name: "2. Review and repair", exact: true}).click();
+      const object = report.objects.find(o => o.formatting && o.text.includes("Hello"));
+      const block = page.locator(`[data-block-id="${object.id}"]`);
+      if (format === "docx") await block.click(); else await block.getByRole("button").click();
+      assert.match(await page.locator(".ow-contrast-summary").innerText(), /2 below minimum/);
+      await page.locator("#ow-action").selectOption("set_text_color");
+      await page.locator("#ow-text-color").fill("#EEEEEE");
+      assert.match(await page.locator(".ow-contrast-preview").innerText(), /2 below minimum/);
+      await page.locator("#ow-text-color").fill("#000000");
+      assert.match(await page.locator(".ow-contrast-preview").innerText(), /0 below minimum/);
+      const apply = async () => {
+        const response = page.waitForResponse(response => response.url().endsWith("/api/documents/apply"));
+        await page.getByRole("button", {name: "Apply approved repair", exact: true}).click();
+        report = (await (await response).json()).data.inspection;
+        await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+      };
+      await apply();
+      assert.match(await page.locator(".ow-contrast-summary").innerText(), /0 below minimum/);
+      assert.equal(report.objects.find(o => o.id === object.id).formatting.outcome, "pass");
+      await page.locator("#ow-action").selectOption("set_font_size");
+      await page.locator("#ow-font-size").fill("18");
+      await apply();
+      assert.deepEqual(report.objects.find(o => o.id === object.id).formatting.font_sizes, [18]);
+      assert.equal(await block.locator("p").first().evaluate(n => getComputedStyle(n).fontSize), "24px");
+      await page.waitForFunction(() => document.querySelector("#save-status").textContent === "Saved in this browser");
+      await page.reload();
+      await block.waitFor();
+      assert.equal(await block.locator("p").first().evaluate(n => getComputedStyle(n).fontSize), "24px");
+      await page.getByRole("button", {name: "Undo last repair"}).click();
+      await page.waitForFunction(() => document.querySelector(".ow").getAttribute("aria-busy") === null);
+      assert.equal(await block.locator("p").first().evaluate(n => getComputedStyle(n).fontSize), "16px");
+    } finally { await browser.close(); }
+  });
